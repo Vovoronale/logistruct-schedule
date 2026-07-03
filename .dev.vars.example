@@ -1,0 +1,2 @@
+ADMIN_PASSWORD=choose-a-long-local-password
+SESSION_SECRET=choose-a-random-secret-with-at-least-32-characters
