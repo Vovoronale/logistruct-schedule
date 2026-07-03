@@ -5,10 +5,19 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   { ignores: ["dist", "coverage", "functions/types.d.ts"] },
-  js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
-  {
+  { files: ["**/*.js"], ...js.configs.recommended },
+  ...tseslint.configs.recommended.map((config) => ({
+    ...config,
     files: ["**/*.{ts,tsx}"],
+  })),
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
+    ...config,
+    files: ["src/**/*.{ts,tsx}", "functions/**/*.ts"],
+    ignores: ["**/*.test.ts", "functions/types.d.ts"],
+  })),
+  {
+    files: ["src/**/*.{ts,tsx}", "functions/**/*.ts"],
+    ignores: ["**/*.test.ts", "functions/types.d.ts"],
     languageOptions: {
       parserOptions: {
         projectService: true,

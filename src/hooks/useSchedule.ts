@@ -37,7 +37,8 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
   }, [client]);
 
   useEffect(() => {
-    void load();
+    const timeout = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timeout);
   }, [load]);
 
   useEffect(() => {
@@ -47,7 +48,10 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [isDirty]);
 
-  const items = isEditing ? draftItems : (saved?.items ?? []);
+  const items = useMemo(
+    () => (isEditing ? draftItems : (saved?.items ?? [])),
+    [draftItems, isEditing, saved],
+  );
 
   const beginEditing = useCallback(() => {
     if (!authenticated || !saved) return false;

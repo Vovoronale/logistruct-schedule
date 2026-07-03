@@ -6,10 +6,6 @@ interface SessionPayload {
   exp: number;
 }
 
-interface TimingSafeSubtleCrypto extends SubtleCrypto {
-  timingSafeEqual(a: BufferSource, b: BufferSource): boolean;
-}
-
 function encodeBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -48,9 +44,8 @@ async function sign(value: string, secret: string): Promise<Uint8Array> {
 
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
-  const subtle = crypto.subtle as TimingSafeSubtleCrypto;
-  if (typeof subtle.timingSafeEqual === "function") {
-    return subtle.timingSafeEqual(a, b);
+  if (typeof crypto.subtle.timingSafeEqual === "function") {
+    return crypto.subtle.timingSafeEqual(a, b);
   }
   let difference = 0;
   for (let index = 0; index < a.length; index += 1) {
