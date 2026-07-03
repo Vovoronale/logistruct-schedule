@@ -88,6 +88,12 @@ export function ScheduleGrid(props: ScheduleGridProps) {
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className={`schedule-scroller ${props.editing ? "is-editing" : ""}`}>
         <table className="schedule-table">
+          {props.timelineDays.length > 0 ? (
+            <colgroup>
+              {Array.from({ length: 9 }, (_, index) => <col key={`schedule-column-${index}`} />)}
+              {props.timelineDays.map((day) => <col className="timeline-day-column" key={day} />)}
+            </colgroup>
+          ) : null}
           <thead>
             <tr>
               <th rowSpan={2} className="sticky-col col-number">№</th>
