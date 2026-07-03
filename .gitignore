@@ -4,8 +4,10 @@ coverage/
 playwright-report/
 test-results/
 .wrangler/
+.playwright-cli/
 .dev.vars
 .env
 .env.*
 !.env.example
 *.log
+*.tsbuildinfo

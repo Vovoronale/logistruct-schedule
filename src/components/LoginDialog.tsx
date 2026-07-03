@@ -44,6 +44,16 @@ export function LoginDialog({ open, onClose, onLogin }: LoginDialogProps) {
       <h2>Вхід адміністратора</h2>
       <p>Введіть пароль, щоб змінювати графік.</p>
       <form onSubmit={(event) => void submit(event)}>
+        <input
+          hidden
+          type="text"
+          name="username"
+          autoComplete="username"
+          value="admin"
+          readOnly
+          tabIndex={-1}
+          aria-hidden="true"
+        />
         <label>
           <span>Пароль</span>
           <input
