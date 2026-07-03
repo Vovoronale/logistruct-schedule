@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ScheduleItem, SchedulePayload } from "../types";
+import type { Assignee, ScheduleItem, SchedulePayload } from "../types";
 import { scheduleClient, type ScheduleClient } from "../lib/api";
+import { applyAssigneeChanges } from "../lib/assignees";
 import { moveItem, normalizePositions } from "../lib/schedule";
 
 function messageFrom(error: unknown): string {
@@ -10,6 +11,7 @@ function messageFrom(error: unknown): string {
 export function useSchedule(client: ScheduleClient = scheduleClient) {
   const [saved, setSaved] = useState<SchedulePayload | null>(null);
   const [draftItems, setDraftItems] = useState<ScheduleItem[]>([]);
+  const [draftAssignees, setDraftAssignees] = useState<Assignee[]>([]);
   const [authenticated, setAuthenticated] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -27,6 +29,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       ]);
       setSaved(schedule);
       setDraftItems(schedule.items);
+      setDraftAssignees(schedule.assignees);
       setAuthenticated(session);
       setIsDirty(false);
     } catch (loadError) {
@@ -52,10 +55,15 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     () => (isEditing ? draftItems : (saved?.items ?? [])),
     [draftItems, isEditing, saved],
   );
+  const assignees = useMemo(
+    () => (isEditing ? draftAssignees : (saved?.assignees ?? [])),
+    [draftAssignees, isEditing, saved],
+  );
 
   const beginEditing = useCallback(() => {
     if (!authenticated || !saved) return false;
     setDraftItems(saved.items.map((item) => ({ ...item })));
+    setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
     setIsEditing(true);
     setIsDirty(false);
     return true;
@@ -67,6 +75,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       setAuthenticated(true);
       if (saved) {
         setDraftItems(saved.items.map((item) => ({ ...item })));
+        setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
         setIsEditing(true);
       }
     },
@@ -133,9 +142,17 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     setIsDirty(true);
   }, []);
 
+  const replaceAssignees = useCallback((next: Assignee[]) => {
+    const result = applyAssigneeChanges(draftItems, draftAssignees, next);
+    setDraftItems(result.items);
+    setDraftAssignees(result.assignees);
+    setIsDirty(true);
+  }, [draftAssignees, draftItems]);
+
   const cancel = useCallback(() => {
     if (!saved) return;
     setDraftItems(saved.items.map((item) => ({ ...item })));
+    setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
     setIsEditing(false);
     setIsDirty(false);
   }, [saved]);
@@ -148,10 +165,11 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       const next = await client.save({
         revision: saved.revision,
         items: normalizePositions(draftItems),
-        assignees: saved.assignees,
+        assignees: draftAssignees,
       });
       setSaved(next);
       setDraftItems(next.items);
+      setDraftAssignees(next.assignees);
       setIsDirty(false);
       setIsEditing(false);
     } catch (saveError) {
@@ -160,11 +178,12 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     } finally {
       setSaving(false);
     }
-  }, [client, draftItems, saved]);
+  }, [client, draftAssignees, draftItems, saved]);
 
   return useMemo(
     () => ({
       items,
+      assignees,
       saved,
       authenticated,
       isEditing,
@@ -181,12 +200,14 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       removeItem,
       reorderItem,
       moveBy,
+      replaceAssignees,
       cancel,
       save,
       clearError: () => setError(null),
     }),
     [
       items,
+      assignees,
       saved,
       authenticated,
       isEditing,
@@ -203,6 +224,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       removeItem,
       reorderItem,
       moveBy,
+      replaceAssignees,
       cancel,
       save,
     ],

@@ -27,8 +27,13 @@ const FALLBACK_COLORS = [
   "#8064A2",
 ] as const;
 
-export function assigneeColor(assignee: string | null): string {
+export function assigneeColor(
+  assignee: string | null,
+  configured: readonly Assignee[] = [],
+): string {
   if (!assignee) return "#A8B3C5";
+  const configuredColor = configured.find((person) => person.name === assignee)?.color;
+  if (configuredColor) return configuredColor;
   const known = ASSIGNEE_COLORS[assignee];
   if (known) return known;
   let hash = 0;
@@ -46,3 +51,4 @@ export function readableTextColor(background: string): "#ffffff" | "#17325c" {
   const yiq = (red * 299 + green * 587 + blue * 114) / 1000;
   return yiq >= 165 ? "#17325c" : "#ffffff";
 }
+import type { Assignee } from "../types";
