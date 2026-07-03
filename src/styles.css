@@ -155,6 +155,25 @@ main { flex: 1; min-width: 0; }
 .login-dialog input { height: 42px; border: 1px solid var(--line-strong); border-radius: 7px; padding: 0 11px; outline: none; }
 .login-dialog input:focus { border-color: #6f98df; box-shadow: 0 0 0 3px rgba(15,86,217,.09); }
 .form-error { padding: 9px 11px; border-radius: 6px; color: #9a2626; background: #ffe9e9; font-size: 12px; }
+.assignee-dialog { width: min(820px, calc(100vw - 32px)); max-height: min(760px, calc(100vh - 32px)); border: 0; border-radius: 14px; padding: 28px; color: #17325c; box-shadow: 0 24px 70px rgba(16,44,86,.24); }
+.assignee-dialog::backdrop { background: rgba(16,44,86,.32); backdrop-filter: blur(2px); }
+.assignee-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-right: 32px; }
+.assignee-dialog-heading h2 { margin: 0; color: var(--navy); font-size: 23px; }
+.assignee-dialog-heading p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+.assignee-editor-list { display: grid; gap: 9px; max-height: min(480px, calc(100vh - 250px)); margin: 22px 0 16px; padding-right: 4px; overflow: auto; }
+.assignee-editor-row { display: grid; grid-template-columns: 30px minmax(150px, 1fr) 170px minmax(130px, auto) 42px; align-items: end; gap: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafd; }
+.assignee-order { align-self: center; color: #8494aa; font-size: 12px; text-align: center; }
+.assignee-name-control, .color-control { display: grid; gap: 5px; color: #61738f; font-size: 11px; font-weight: 650; }
+.assignee-name-control input { width: 100%; height: 38px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 10px; color: var(--navy); background: #fff; outline: none; }
+.assignee-name-control input:focus { border-color: #6f98df; box-shadow: 0 0 0 3px rgba(15,86,217,.08); }
+.color-input-wrap { height: 38px; display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 5px; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; }
+.color-input-wrap input { width: 38px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
+.color-input-wrap code { color: #405777; font-size: 11px; }
+.usage-note { align-self: center; color: #7a899f; font-size: 11px; }
+.usage-note.used { color: #8b6412; font-weight: 650; }
+.assignee-delete { color: #b23b3b; }
+.assignee-empty { padding: 28px; border: 1px dashed var(--line-strong); border-radius: 9px; color: var(--muted); text-align: center; }
+.assignee-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 16px; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 50; min-width: 280px; max-width: min(420px, calc(100vw - 44px)); padding: 13px 10px 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-radius: 8px; color: #fff; box-shadow: 0 15px 40px rgba(16,44,86,.2); font-size: 13px; }
 .toast.success { background: #27653b; }
 .toast.error { background: #a83232; }
@@ -187,6 +206,12 @@ main { flex: 1; min-width: 0; }
   .schedule-scroller { max-height: calc(100vh - 310px); }
   .app-footer { padding-inline: 16px; }
   .app-footer span:last-child { display: none; }
+  .assignee-dialog { padding: 22px 16px 16px; }
+  .assignee-dialog-heading { display: grid; padding-right: 28px; }
+  .assignee-dialog-heading .button { width: max-content; }
+  .assignee-editor-row { grid-template-columns: 24px minmax(0, 1fr) 42px; align-items: center; }
+  .color-control, .usage-note { grid-column: 2; }
+  .assignee-delete { grid-column: 3; grid-row: 1 / span 3; }
   :root { --c1: 46px; --c2: 72px; --c3: 68px; --c4: 230px; }
 }
 @media (prefers-reduced-motion: reduce) {

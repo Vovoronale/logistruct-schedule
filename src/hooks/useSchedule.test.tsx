@@ -38,10 +38,10 @@ function client(): ScheduleClient {
     getSession: vi.fn().mockResolvedValue(true),
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
-    save: vi.fn().mockImplementation(async (draft) => ({
+    save: (draft) => Promise.resolve({
       ...draft,
       updatedAt: payload.updatedAt,
-    })),
+    }),
   };
 }
 

@@ -1,5 +1,6 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
+import { AssigneeDialog } from "./components/AssigneeDialog";
 import { AssigneeLegend } from "./components/AssigneeLegend";
 import { EditActions } from "./components/EditActions";
 import { FilterBar } from "./components/FilterBar";
@@ -17,13 +18,18 @@ export default function App() {
   const schedule = useSchedule();
   const [filters, setFilters] = useState<ScheduleFilters>(EMPTY_FILTERS);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const deferredQuery = useDeferredValue(filters.query);
   const effectiveFilters = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
   const filteredItems = useMemo(() => filterItems(schedule.items, effectiveFilters), [schedule.items, effectiveFilters]);
   const timelineDays = useMemo(() => buildTimelineDays(schedule.items), [schedule.items]);
   const sections = useMemo(() => uniqueSorted(schedule.items, "section"), [schedule.items]);
-  const assignees = useMemo(() => uniqueSorted(schedule.items, "assignee"), [schedule.items]);
+  const assignedNames = useMemo(() => uniqueSorted(schedule.items, "assignee"), [schedule.items]);
+  const assigneeNames = useMemo(() => {
+    const configured = schedule.assignees.map((person) => person.name);
+    return [...configured, ...assignedNames.filter((name) => !configured.includes(name))];
+  }, [assignedNames, schedule.assignees]);
 
   const requestEdit = () => {
     if (!schedule.beginEditing()) setLoginOpen(true);
@@ -31,6 +37,7 @@ export default function App() {
   const cancel = () => {
     if (schedule.isDirty && !window.confirm("Скасувати всі незбережені зміни?")) return;
     schedule.cancel();
+    setAssigneeDialogOpen(false);
   };
   const save = async () => {
     try {
@@ -59,13 +66,20 @@ export default function App() {
         onLogout={() => void schedule.logout()}
       />
       <main>
-        <FilterBar filters={filters} sections={sections} assignees={assignees} onChange={setFilters} />
+        <FilterBar filters={filters} sections={sections} assignees={assigneeNames} onChange={setFilters} />
         <div className="legend-row">
           <span>{filteredItems.length} із {schedule.items.length} креслень</span>
-          <AssigneeLegend visibleAssignees={assignees} />
+          <AssigneeLegend assignees={schedule.assignees} visibleAssignees={assignedNames} />
         </div>
         {schedule.isEditing ? (
-          <EditActions dirty={schedule.isDirty} saving={schedule.saving} onAdd={schedule.addItem} onSave={() => void save()} onCancel={cancel} />
+          <EditActions
+            dirty={schedule.isDirty}
+            saving={schedule.saving}
+            onAdd={schedule.addItem}
+            onManageAssignees={() => setAssigneeDialogOpen(true)}
+            onSave={() => void save()}
+            onCancel={cancel}
+          />
         ) : null}
         {schedule.loading ? (
           <div className="loading-state" role="status"><span /><p>Завантажуємо графік…</p></div>
@@ -83,7 +97,7 @@ export default function App() {
               items={filteredItems}
               timelineDays={timelineDays}
               editing={schedule.isEditing}
-              assignees={Object.keys({ ІВ: 1, Втк: 1, Єв: 1, Ол: 1, Ми: 1, Ро: 1, Ва: 1, Іг: 1, На: 1, Вта: 1, Тр: 1, Вв: 1, Ай: 1, Юл: 1, Оо: 1, Тн: 1, Св: 1 })}
+              assignees={schedule.assignees}
               onUpdate={schedule.updateItem}
               onDelete={remove}
               onReorder={schedule.reorderItem}
@@ -97,6 +111,13 @@ export default function App() {
         <span>Дата завершення рахується в робочих днях</span>
       </footer>
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} onLogin={schedule.login} />
+      <AssigneeDialog
+        open={assigneeDialogOpen}
+        assignees={schedule.assignees}
+        items={schedule.items}
+        onClose={() => setAssigneeDialogOpen(false)}
+        onApply={schedule.replaceAssignees}
+      />
       {toast ? <Toast {...toast} onClose={() => setToast(null)} /> : null}
     </div>
   );

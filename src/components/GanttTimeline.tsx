@@ -1,4 +1,4 @@
-import type { ScheduleItem } from "../types";
+import type { Assignee, ScheduleItem } from "../types";
 import { addWorkingDays, dayNumber, formatMonth, isWeekend, weekdayLabel } from "../lib/dates";
 import { assigneeColor, readableTextColor } from "../lib/colors";
 
@@ -30,10 +30,10 @@ export function GanttDayHeaders({ days }: { days: string[] }) {
   ));
 }
 
-export function GanttCells({ item, days }: { item: ScheduleItem; days: string[] }) {
+export function GanttCells({ item, days, assignees }: { item: ScheduleItem; days: string[]; assignees: Assignee[] }) {
   const end = addWorkingDays(item.startDate, item.durationDays);
   const active = days.map((day) => Boolean(item.startDate && end && day >= item.startDate && day < end));
-  const color = assigneeColor(item.assignee);
+  const color = assigneeColor(item.assignee, assignees);
   const textColor = readableTextColor(color);
   return days.map((day, index) => {
     const isActive = active[index];

@@ -4,11 +4,12 @@ interface EditActionsProps {
   dirty: boolean;
   saving: boolean;
   onAdd: () => void;
+  onManageAssignees: () => void;
   onSave: () => void;
   onCancel: () => void;
 }
 
-export function EditActions({ dirty, saving, onAdd, onSave, onCancel }: EditActionsProps) {
+export function EditActions({ dirty, saving, onAdd, onManageAssignees, onSave, onCancel }: EditActionsProps) {
   return (
     <div className="edit-actions">
       <div>
@@ -17,6 +18,9 @@ export function EditActions({ dirty, saving, onAdd, onSave, onCancel }: EditActi
       </div>
       <button className="button secondary" type="button" onClick={onAdd}>
         <PlusIcon /> Додати рядок
+      </button>
+      <button className="button secondary" type="button" onClick={onManageAssignees}>
+        Виконавці
       </button>
       <button className="button ghost" type="button" onClick={onCancel}>
         <XIcon /> Скасувати

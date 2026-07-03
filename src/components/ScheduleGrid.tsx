@@ -2,7 +2,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { CSSProperties } from "react";
-import type { ScheduleItem, ScheduleStatus } from "../types";
+import type { Assignee, ScheduleItem, ScheduleStatus } from "../types";
 import { addWorkingDays, formatDate } from "../lib/dates";
 import { isOverdue, STATUS_LABELS } from "../lib/schedule";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, TrashIcon } from "./Icons";
@@ -12,7 +12,7 @@ interface ScheduleGridProps {
   items: ScheduleItem[];
   timelineDays: string[];
   editing: boolean;
-  assignees: string[];
+  assignees: Assignee[];
   onUpdate: (id: string, patch: Partial<ScheduleItem>) => void;
   onDelete: (id: string) => void;
   onReorder: (activeId: string, overId: string) => void;
@@ -25,7 +25,7 @@ interface RowProps extends Omit<ScheduleGridProps, "items" | "onReorder"> {
   rowCount: number;
 }
 
-function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, editing, onUpdate, onDelete, onMoveBy }: RowProps) {
+function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, editing, assignees, onUpdate, onDelete, onMoveBy }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !editing });
   const style = { transform: CSS.Transform.toString(transform), transition } as CSSProperties;
   const endDate = addWorkingDays(item.startDate, item.durationDays);
@@ -68,7 +68,7 @@ function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, editing, 
           </div>
         ) : <span className={`status-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span>}
       </td>
-      {timelineDays.length > 0 ? <GanttCells item={item} days={timelineDays} /> : (
+      {timelineDays.length > 0 ? <GanttCells item={item} days={timelineDays} assignees={assignees} /> : (
         <td className="empty-timeline-cell">{rowIndex === 0 ? <span>Дати ще не заплановані</span> : null}</td>
       )}
     </tr>
@@ -112,7 +112,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
           </SortableContext>
         </table>
         <datalist id="assignee-options">
-          {props.assignees.map((assignee) => <option value={assignee} key={assignee} />)}
+          {props.assignees.map((assignee) => <option value={assignee.name} key={assignee.id} />)}
         </datalist>
       </div>
     </DndContext>
