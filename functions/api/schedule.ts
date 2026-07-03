@@ -1,4 +1,4 @@
-import type { ScheduleItem, SchedulePayload } from "../../src/types";
+import type { Assignee, ScheduleItem, SchedulePayload } from "../../src/types";
 import { isAuthenticated } from "../lib/auth";
 import { json, readJsonBody } from "../lib/http";
 import { ValidationError, validateScheduleDraft } from "../lib/validation";
@@ -22,6 +22,15 @@ interface ScheduleRow {
   updated_at: string;
 }
 
+interface AssigneeRow {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 function mapRow(row: ScheduleRow): ScheduleItem {
   return {
     id: row.id,
@@ -38,8 +47,19 @@ function mapRow(row: ScheduleRow): ScheduleItem {
   };
 }
 
+function mapAssignee(row: AssigneeRow): Assignee {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    position: row.position,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 async function readSchedule(db: D1Database): Promise<SchedulePayload> {
-  const [meta, rows] = await Promise.all([
+  const [meta, rows, assigneeRows] = await Promise.all([
     db
       .prepare("SELECT revision, updated_at FROM schedule_meta WHERE id = 1")
       .first<MetaRow>(),
@@ -50,12 +70,19 @@ async function readSchedule(db: D1Database): Promise<SchedulePayload> {
          FROM schedule_items ORDER BY position ASC`,
       )
       .all<ScheduleRow>(),
+    db
+      .prepare(
+        `SELECT id, name, color, position, created_at, updated_at
+         FROM assignees ORDER BY position ASC`,
+      )
+      .all<AssigneeRow>(),
   ]);
   if (!meta) throw new Error("SCHEDULE_META_MISSING");
   return {
     revision: meta.revision,
     updatedAt: meta.updated_at,
     items: rows.results.map(mapRow),
+    assignees: assigneeRows.results.map(mapAssignee),
   };
 }
 
@@ -86,6 +113,23 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
       );
     }
 
+    const currentAssignees = await env.DB.prepare(
+      "SELECT name FROM assignees ORDER BY position ASC",
+    ).all<Pick<AssigneeRow, "name">>();
+    const nextNames = new Set(draft.assignees.map((person) => person.name));
+    for (const existing of currentAssignees.results) {
+      if (
+        !nextNames.has(existing.name)
+        && draft.items.some((item) => item.assignee === existing.name)
+      ) {
+        throw new ValidationError(
+          `Спочатку замініть виконавця ${existing.name} у кресленнях`,
+          undefined,
+          "assignees",
+        );
+      }
+    }
+
     const now = new Date().toISOString();
     const updateMeta = env.DB.prepare(
       `UPDATE schedule_meta
@@ -94,14 +138,15 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
        WHERE id = 1`,
     ).bind(draft.revision, now);
     const deleteItems = env.DB.prepare("DELETE FROM schedule_items");
-    const insert = env.DB.prepare(
+    const deleteAssignees = env.DB.prepare("DELETE FROM assignees");
+    const insertItem = env.DB.prepare(
       `INSERT INTO schedule_items
        (id, position, section, sheet_number, title, start_date, duration_days,
         assignee, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-    const inserts = draft.items.map((item) =>
-      insert.bind(
+    const itemInserts = draft.items.map((item) =>
+      insertItem.bind(
         item.id,
         item.position,
         item.section,
@@ -115,12 +160,34 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
         now,
       ),
     );
-    await env.DB.batch([updateMeta, deleteItems, ...inserts]);
+    const insertAssignee = env.DB.prepare(
+      `INSERT INTO assignees
+       (id, name, color, position, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    const assigneeInserts = draft.assignees.map((person) =>
+      insertAssignee.bind(
+        person.id,
+        person.name,
+        person.color,
+        person.position,
+        person.createdAt,
+        now,
+      ),
+    );
+    await env.DB.batch([
+      updateMeta,
+      deleteItems,
+      deleteAssignees,
+      ...assigneeInserts,
+      ...itemInserts,
+    ]);
 
     return json({
       revision: draft.revision + 1,
       updatedAt: now,
       items: draft.items.map((item) => ({ ...item, updatedAt: now })),
+      assignees: draft.assignees.map((person) => ({ ...person, updatedAt: now })),
     } satisfies SchedulePayload);
   } catch (error) {
     if (error instanceof ValidationError) {

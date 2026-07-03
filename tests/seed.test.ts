@@ -21,4 +21,11 @@ describe("initial D1 seed", () => {
     expect(sql).toContain("INSERT INTO schedule_meta");
     expect(sql).toMatch(/VALUES \(1, 1,/);
   });
+
+  it("creates and seeds the assignee directory", () => {
+    const assigneeSql = readFileSync("migrations/0002_assignees.sql", "utf8");
+    expect(assigneeSql).toContain("CREATE TABLE assignees");
+    expect((assigneeSql.match(/INSERT INTO assignees/g) ?? []).length).toBe(17);
+    expect(assigneeSql).toContain("#00B050");
+  });
 });

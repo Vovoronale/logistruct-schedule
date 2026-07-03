@@ -1,4 +1,5 @@
 import type {
+  Assignee,
   ScheduleDraft,
   ScheduleItem,
   ScheduleStatus,
@@ -6,6 +7,7 @@ import type {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ID = /^[A-Za-z0-9_-]{1,100}$/u;
+const HEX_COLOR = /^#[0-9A-F]{6}$/iu;
 const STATUSES = new Set<ScheduleStatus>([
   "planned",
   "in_progress",
@@ -108,6 +110,29 @@ function validateItem(value: unknown, index: number): ScheduleItem {
   };
 }
 
+function validateAssignee(value: unknown, index: number): Assignee {
+  const row = index + 1;
+  if (!isRecord(value)) {
+    throw new ValidationError("Некоректний виконавець", row);
+  }
+  const id = requiredText(value.id, row, "id", 100);
+  if (!ID.test(id)) {
+    throw new ValidationError("Некоректний ідентифікатор", row, "id");
+  }
+  const color = requiredText(value.color, row, "color", 7).toUpperCase();
+  if (!HEX_COLOR.test(color)) {
+    throw new ValidationError("Колір має бути у форматі #RRGGBB", row, "color");
+  }
+  return {
+    id,
+    name: requiredText(value.name, row, "name", 24),
+    color,
+    position: row,
+    createdAt: timestamp(value.createdAt, row, "createdAt"),
+    updatedAt: timestamp(value.updatedAt, row, "updatedAt"),
+  };
+}
+
 export function validateScheduleDraft(value: unknown): ScheduleDraft {
   if (!isRecord(value)) throw new ValidationError("Некоректний запит");
   if (!Number.isInteger(value.revision) || Number(value.revision) < 1) {
@@ -115,6 +140,9 @@ export function validateScheduleDraft(value: unknown): ScheduleDraft {
   }
   if (!Array.isArray(value.items) || value.items.length > 1_000) {
     throw new ValidationError("Графік може містити до 1000 рядків", undefined, "items");
+  }
+  if (!Array.isArray(value.assignees) || value.assignees.length > 200) {
+    throw new ValidationError("Довідник може містити до 200 виконавців", undefined, "assignees");
   }
 
   const items = value.items.map(validateItem);
@@ -125,5 +153,19 @@ export function validateScheduleDraft(value: unknown): ScheduleDraft {
     }
     ids.add(item.id);
   }
-  return { revision: Number(value.revision), items };
+  const assignees = value.assignees.map(validateAssignee);
+  const assigneeIds = new Set<string>();
+  const assigneeNames = new Set<string>();
+  for (const [index, assignee] of assignees.entries()) {
+    if (assigneeIds.has(assignee.id)) {
+      throw new ValidationError("Ідентифікатори виконавців не можуть повторюватися", index + 1, "id");
+    }
+    const nameKey = assignee.name.toLocaleLowerCase("uk-UA");
+    if (assigneeNames.has(nameKey)) {
+      throw new ValidationError("Назви виконавців не можуть повторюватися", index + 1, "name");
+    }
+    assigneeIds.add(assignee.id);
+    assigneeNames.add(nameKey);
+  }
+  return { revision: Number(value.revision), items, assignees };
 }

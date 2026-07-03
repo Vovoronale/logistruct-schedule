@@ -14,8 +14,18 @@ export interface ScheduleItem {
   updatedAt: string;
 }
 
+export interface Assignee {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SchedulePayload {
   items: ScheduleItem[];
+  assignees: Assignee[];
   revision: number;
   updatedAt: string;
 }
@@ -23,4 +33,5 @@ export interface SchedulePayload {
 export interface ScheduleDraft {
   revision: number;
   items: ScheduleItem[];
+  assignees: Assignee[];
 }

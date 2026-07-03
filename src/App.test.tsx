@@ -5,6 +5,7 @@ import App from "./App";
 const schedule = {
   revision: 1,
   updatedAt: "2026-07-03T00:00:00Z",
+  assignees: [],
   items: [
     {
       id: "drawing-001",

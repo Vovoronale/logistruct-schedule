@@ -148,6 +148,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       const next = await client.save({
         revision: saved.revision,
         items: normalizePositions(draftItems),
+        assignees: saved.assignees,
       });
       setSaved(next);
       setDraftItems(next.items);
