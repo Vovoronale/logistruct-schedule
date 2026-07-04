@@ -40,6 +40,8 @@ function client(): ScheduleClient {
     getSession: vi.fn().mockResolvedValue(true),
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
+    getHistory: vi.fn().mockResolvedValue([]),
+    getHistoryRevision: vi.fn().mockRejectedValue(new Error("not selected")),
     save: (draft) => Promise.resolve({
       ...draft,
       updatedAt: payload.updatedAt,

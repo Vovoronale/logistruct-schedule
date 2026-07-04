@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { onRequestGet, onRequestPut } from "../functions/api/schedule";
+import { onRequestGet as onHistoryGet } from "../functions/api/schedule/history";
+import { onRequestGet as onHistoryRevisionGet } from "../functions/api/schedule/history/[revision]";
 import { createSessionToken } from "../functions/lib/auth";
 
 function createContext(options?: {
@@ -8,6 +10,8 @@ function createContext(options?: {
   rows?: Record<string, unknown>[];
   assigneeRows?: Record<string, unknown>[];
   dependencyRows?: Record<string, unknown>[];
+  historyRows?: Record<string, unknown>[];
+  snapshotJson?: string | null;
   batchError?: Error;
 }) {
   const recording = {
@@ -21,6 +25,11 @@ function createContext(options?: {
       return statement(sql, nextValues);
     },
     async first() {
+      if (sql.includes("FROM schedule_history")) {
+        return options?.snapshotJson === undefined || options.snapshotJson === null
+          ? null
+          : { snapshot_json: options.snapshotJson };
+      }
       if (sql.includes("schedule_meta")) {
         return {
           revision: options?.revision ?? 1,
@@ -30,6 +39,9 @@ function createContext(options?: {
       return null;
     },
     async all() {
+      if (sql.includes("FROM schedule_history")) {
+        return { results: options?.historyRows ?? [], success: true, meta: {} };
+      }
       if (sql.includes("FROM item_dependencies")) {
         return { results: options?.dependencyRows ?? [], success: true, meta: {} };
       }
@@ -236,5 +248,60 @@ describe("schedule API", () => {
 
     expect(response.status).toBe(500);
     expect(context.recording.batches).toBe(1);
+  });
+});
+
+describe("schedule history API", () => {
+  it("lists retained revisions newest first", async () => {
+    const response = await onHistoryGet(createContext({
+      historyRows: [
+        { revision: 7, saved_at: "2026-07-03T12:00:00Z" },
+        { revision: 6, saved_at: "2026-07-03T11:00:00Z" },
+      ],
+    }) as never);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([
+      { revision: 7, savedAt: "2026-07-03T12:00:00Z" },
+      { revision: 6, savedAt: "2026-07-03T11:00:00Z" },
+    ]);
+  });
+
+  it("returns a selected retained snapshot", async () => {
+    const snapshot = {
+      revision: 6,
+      updatedAt: "2026-07-03T11:00:00Z",
+      items: [],
+      assignees: [],
+    };
+    const context = createContext({ snapshotJson: JSON.stringify(snapshot) });
+    context.params = { revision: "6" };
+
+    const response = await onHistoryRevisionGet(context as never);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(snapshot);
+  });
+
+  it("rejects invalid and missing history revisions", async () => {
+    const invalid = createContext();
+    invalid.params = { revision: "abc" };
+    const missing = createContext({ snapshotJson: null });
+    missing.params = { revision: "9" };
+
+    expect((await onHistoryRevisionGet(invalid as never)).status).toBe(400);
+    expect((await onHistoryRevisionGet(missing as never)).status).toBe(404);
+  });
+
+  it("does not expose malformed stored snapshot data", async () => {
+    const context = createContext({ snapshotJson: "{broken" });
+    context.params = { revision: "6" };
+
+    const response = await onHistoryRevisionGet(context as never);
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Не вдалося завантажити версію графіка",
+    });
   });
 });

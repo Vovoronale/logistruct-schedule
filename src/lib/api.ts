@@ -1,4 +1,9 @@
-import type { ScheduleDraft, SchedulePayload } from "../types";
+import type {
+  ScheduleDraft,
+  ScheduleHistoryEntry,
+  ScheduleHistorySnapshot,
+  SchedulePayload,
+} from "../types";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -38,6 +43,8 @@ export interface ScheduleClient {
   login(password: string): Promise<void>;
   logout(): Promise<void>;
   save(draft: ScheduleDraft): Promise<SchedulePayload>;
+  getHistory(): Promise<ScheduleHistoryEntry[]>;
+  getHistoryRevision(revision: number): Promise<ScheduleHistorySnapshot>;
 }
 
 export const scheduleClient: ScheduleClient = {
@@ -62,4 +69,10 @@ export const scheduleClient: ScheduleClient = {
       method: "PUT",
       body: JSON.stringify(draft),
     }),
+  getHistory: () =>
+    requestJson<ScheduleHistoryEntry[]>("/api/schedule/history"),
+  getHistoryRevision: (revision) =>
+    requestJson<ScheduleHistorySnapshot>(
+      "/api/schedule/history/" + encodeURIComponent(String(revision)),
+    ),
 };
