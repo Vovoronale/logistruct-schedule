@@ -28,4 +28,15 @@ describe("initial D1 seed", () => {
     expect((assigneeSql.match(/INSERT INTO assignees/g) ?? []).length).toBe(17);
     expect(assigneeSql).toContain("#00B050");
   });
+
+  it("adds stable dependencies and history storage", () => {
+    const dependencySql = readFileSync(
+      "migrations/0003_dependencies_history.sql",
+      "utf8",
+    );
+    expect(dependencySql).toContain("ADD COLUMN start_mode");
+    expect(dependencySql).toContain("CREATE TABLE item_dependencies");
+    expect(dependencySql).toContain("CREATE TABLE schedule_history");
+    expect(dependencySql).toContain("ON DELETE RESTRICT");
+  });
 });
