@@ -117,6 +117,8 @@ describe("DependencyArrows", () => {
       .toHaveAttribute("marker-end", "url(#dependency-arrowhead-predecessor)");
     expect(overlay.querySelector(".dependency-arrow.successor"))
       .toHaveAttribute("marker-end", "url(#dependency-arrowhead-successor)");
+    expect(overlay.querySelector('[data-arrow-edge="a->b"] path'))
+      .toHaveAttribute("d", "M 60 -70 H 70 V -40 H 80 V -10 H 90");
   });
 
   it("renders an ellipsis when a related bar is filtered out", async () => {

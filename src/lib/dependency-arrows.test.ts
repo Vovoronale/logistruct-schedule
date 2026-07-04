@@ -35,9 +35,9 @@ const items = [
 ];
 
 const anchors = new Map<string, GanttBarAnchor>([
-  ["a", { id: "a", position: 1, startX: 10, endX: 40, centerY: 20 }],
-  ["b", { id: "b", position: 2, startX: 60, endX: 100, centerY: 80 }],
-  ["c", { id: "c", position: 3, startX: 120, endX: 160, centerY: 140 }],
+  ["a", { id: "a", position: 1, startX: 10, endX: 40, topY: 10, bottomY: 30, centerY: 20 }],
+  ["b", { id: "b", position: 2, startX: 60, endX: 100, topY: 70, bottomY: 90, centerY: 80 }],
+  ["c", { id: "c", position: 3, startX: 120, endX: 160, topY: 130, bottomY: 150, centerY: 140 }],
 ]);
 
 describe("selectDependencyArrowEdges", () => {
@@ -71,24 +71,57 @@ describe("buildDependencyArrowRoutes", () => {
     { id: "b->c", fromId: "b", toId: "c", tone: "successor" },
   ];
 
-  it("builds complete arrowed paths from only horizontal and vertical segments", () => {
-    const routes = buildDependencyArrowRoutes({ edges, items, anchors });
+  it("routes downward outside both connected bars", () => {
+    const [route] = buildDependencyArrowRoutes({
+      edges: [edges[0]],
+      items,
+      anchors,
+    });
 
-    expect(routes).toHaveLength(3);
-    for (const route of routes) {
-      expect(route.kind).toBe("complete");
-      expect(route.path).toMatch(/^M \d+ \d+ H \d+ V \d+ H \d+$/u);
-      expect(route.path).not.toContain(" L ");
-      expect(route.markerEnd).toBe(true);
-    }
+    expect(route.path).toBe("M 40 20 H 50 V 50 H 50 V 80 H 60");
+    expect(route.path).toMatch(/^M \d+ \d+ H \d+ V \d+ H \d+ V \d+ H \d+$/u);
+    expect(route.path).not.toContain(" L ");
+    expect(route.markerEnd).toBe(true);
   });
 
-  it("uses separate vertical channels for parallel edges", () => {
-    const routes = buildDependencyArrowRoutes({ edges, items, anchors });
-    const fromA = routes.filter((route) => route.id.startsWith("a->"));
-    const channels = fromA.map((route) => route.path.match(/ H (\d+) /u)?.[1]);
+  it("routes upward through the gap between connected bars", () => {
+    const [route] = buildDependencyArrowRoutes({
+      edges: [{ id: "c->a", fromId: "c", toId: "a", tone: "predecessor" }],
+      items,
+      anchors,
+    });
 
-    expect(new Set(channels).size).toBe(2);
+    expect(route.path).toBe("M 160 140 H 170 V 80 H 0 V 20 H 10");
+  });
+
+  it("keeps lane offsets inside a narrow row gap", () => {
+    const narrowAnchors = new Map<string, GanttBarAnchor>([
+      ["a", { id: "a", position: 1, startX: 10, endX: 40, topY: 10, bottomY: 30, centerY: 20 }],
+      ["b", { id: "b", position: 2, startX: 60, endX: 100, topY: 32, bottomY: 52, centerY: 42 }],
+    ]);
+    const parallelEdges: DependencyArrowEdge[] = Array.from({ length: 5 }, (_, index) => ({
+      id: `a->b-${index}`,
+      fromId: "a",
+      toId: "b",
+      tone: "predecessor",
+    }));
+    const routes = buildDependencyArrowRoutes({ edges: parallelEdges, items, anchors: narrowAnchors });
+    const laneYs = routes.map((route) => Number(route.path.match(/ V (\d+) H/u)?.[1]));
+
+    expect(laneYs.every((y) => y >= 30 && y <= 32)).toBe(true);
+  });
+
+  it("uses separate channels for parallel edges when the row gap allows it", () => {
+    const parallelEdges: DependencyArrowEdge[] = Array.from({ length: 3 }, (_, index) => ({
+      id: `a->b-${index}`,
+      fromId: "a",
+      toId: "b",
+      tone: "predecessor",
+    }));
+    const routes = buildDependencyArrowRoutes({ edges: parallelEdges, items, anchors });
+    const channels = routes.map((route) => route.path.match(/ V (\d+) H/u)?.[1]);
+
+    expect(new Set(channels).size).toBe(3);
   });
 
   it("shows an inbound ellipsis stub for a hidden predecessor", () => {
