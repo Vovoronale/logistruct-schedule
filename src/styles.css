@@ -137,8 +137,13 @@ button.dependency-chip { cursor: pointer; }
 .day-header span, .day-header small { display: block; line-height: 1.35; }
 .day-header small { color: #75869f; font-size: 9px; font-weight: 600; }
 .day-header.weekend, .timeline-cell.weekend { background: var(--weekend) !important; }
+.day-header.past, .timeline-cell.past { color: #8b95a3; background: #f0f2f5 !important; }
+.day-header.today, .timeline-cell.today { position: relative; }
+.day-header.today::after, .timeline-cell.today::after { content: ""; position: absolute; right: -1px; top: 0; bottom: 0; width: 2px; z-index: 4; background: #d93636; pointer-events: none; }
+.day-header.today::after { top: calc(-1 * var(--header-top)); }
 .timeline-cell { padding: 0 !important; position: relative; }
 .gantt-bar { position: absolute; left: 0; right: 0; top: 16px; height: 27px; display: flex; align-items: center; padding: 0 7px; z-index: 1; font-weight: 750; font-size: 10px; white-space: nowrap; overflow: visible; box-shadow: inset 0 0 0 1px rgba(14,42,78,.06); }
+.gantt-bar.past-bar { filter: saturate(0); }
 .gantt-bar.first { border-radius: 5px 0 0 5px; }
 .gantt-bar.last { border-radius: 0 5px 5px 0; }
 .gantt-bar.first.last { border-radius: 5px; }

@@ -47,9 +47,12 @@ interface TimelineSource {
   durationDays: number | null;
 }
 
-export function buildTimelineDays(items: TimelineSource[]): string[] {
-  let earliest: Date | null = null;
-  let latest: Date | null = null;
+export function buildTimelineDays(
+  items: TimelineSource[],
+  today = todayIso(),
+): string[] {
+  let earliest = parseIsoDate(today);
+  let latest = parseIsoDate(today);
 
   for (const item of items) {
     const start = parseIsoDate(item.startDate);

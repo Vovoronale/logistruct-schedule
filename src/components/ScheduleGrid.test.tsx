@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduleItem } from "../types";
+import { todayIso } from "../lib/dates";
 import { ScheduleGrid } from "./ScheduleGrid";
 
 const item: ScheduleItem = {
@@ -20,6 +21,8 @@ const item: ScheduleItem = {
   updatedAt: "2026-07-03T00:00:00Z",
 };
 
+afterEach(() => vi.restoreAllMocks());
+
 describe("ScheduleGrid calendar columns", () => {
   it("defines one fixed-width column for every timeline day", () => {
     const { container } = render(
@@ -36,6 +39,32 @@ describe("ScheduleGrid calendar columns", () => {
     );
 
     expect(container.querySelectorAll("col.timeline-day-column")).toHaveLength(3);
+  });
+
+  it("centers the today column on initial render", () => {
+    vi.spyOn(HTMLElement.prototype, "offsetLeft", "get")
+      .mockImplementation(function offsetLeft(this: HTMLElement) {
+        return this.dataset.today === "true" ? 500 : 0;
+      });
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockImplementation(function clientWidth(this: HTMLElement) {
+        return this.classList.contains("schedule-scroller") ? 200 : 24;
+      });
+    const { container } = render(
+      <ScheduleGrid
+        items={[item]}
+        timelineDays={[todayIso()]}
+        editing={false}
+        assignees={[]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector<HTMLElement>(".schedule-scroller")?.scrollLeft)
+      .toBe(412);
   });
 
   it("marks selected, predecessor, successor and unrelated rows", async () => {

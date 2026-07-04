@@ -1,7 +1,7 @@
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { Assignee, ScheduleItem, ScheduleStatus } from "../types";
 import { addWorkingDays, formatDate } from "../lib/dates";
 import { isOverdue, STATUS_LABELS } from "../lib/schedule";
@@ -113,6 +113,9 @@ function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, editing, 
 }
 
 export function ScheduleGrid(props: ScheduleGridProps) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const centeredToday = useRef(false);
+  const timelineKey = props.timelineDays.join("|");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -121,9 +124,21 @@ export function ScheduleGrid(props: ScheduleGridProps) {
     if (over && active.id !== over.id) props.onReorder(String(active.id), String(over.id));
   };
 
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || centeredToday.current || !timelineKey) return;
+    const todayCell = scroller.querySelector<HTMLElement>('[data-today="true"]');
+    if (!todayCell) return;
+    scroller.scrollLeft = Math.max(
+      0,
+      todayCell.offsetLeft - scroller.clientWidth / 2 + todayCell.clientWidth / 2,
+    );
+    centeredToday.current = true;
+  }, [timelineKey]);
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className={`schedule-scroller ${props.editing ? "is-editing" : ""}`}>
+      <div ref={scrollerRef} className={`schedule-scroller ${props.editing ? "is-editing" : ""}`}>
         <table className="schedule-table">
           {props.timelineDays.length > 0 ? (
             <colgroup>
