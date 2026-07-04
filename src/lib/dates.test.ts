@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { addWorkingDays, buildTimelineDays, isWeekend } from "./dates";
+import {
+  addWorkingDays,
+  buildTimelineDays,
+  isWeekend,
+  workingDaysAfter,
+} from "./dates";
 
 describe("addWorkingDays", () => {
   it("skips Saturday and Sunday using the workbook semantics", () => {
@@ -30,5 +35,18 @@ describe("timeline helpers", () => {
 
   it("returns an empty range when no row is scheduled", () => {
     expect(buildTimelineDays([{ startDate: null, durationDays: null }])).toEqual([]);
+  });
+});
+
+describe("workingDaysAfter", () => {
+  it("starts at zero and excludes weekends", () => {
+    expect(workingDaysAfter("2026-07-03", "2026-07-03")).toBe(0);
+    expect(workingDaysAfter("2026-07-03", "2026-07-06")).toBe(1);
+    expect(workingDaysAfter("2026-07-03", "2026-07-07")).toBe(2);
+  });
+
+  it("returns null for invalid dates and zero before the start", () => {
+    expect(workingDaysAfter("bad-date", "2026-07-07")).toBeNull();
+    expect(workingDaysAfter("2026-07-07", "2026-07-03")).toBe(0);
   });
 });

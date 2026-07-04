@@ -42,6 +42,27 @@ export function addWorkingDays(
   return toIsoDate(cursor);
 }
 
+export function workingDaysAfter(
+  startValue: string,
+  endValue: string,
+): number | null {
+  const start = parseIsoDate(startValue);
+  const end = parseIsoDate(endValue);
+  if (!start || !end) return null;
+  if (end <= start) return 0;
+
+  let count = 0;
+  for (
+    let cursor = shiftCalendarDays(start, 1);
+    cursor <= end;
+    cursor = shiftCalendarDays(cursor, 1)
+  ) {
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6) count += 1;
+  }
+  return count;
+}
+
 interface TimelineSource {
   startDate: string | null;
   durationDays: number | null;
