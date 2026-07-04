@@ -16,6 +16,7 @@ it("explains and clears dependency analysis", async () => {
   expect(screen.getByText("Попередники")).toBeVisible();
   expect(screen.getByText("Вибрана робота")).toBeVisible();
   expect(screen.getByText("Наступники")).toBeVisible();
+  expect(screen.getByText("… — пов’язана робота прихована фільтром")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Очистити підсвічування" }));
   expect(onClearAnalysis).toHaveBeenCalledOnce();
 });

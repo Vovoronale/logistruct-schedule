@@ -15,6 +15,7 @@ import { calculateItemProgress } from "../lib/progress";
 import { isOverdue, STATUS_LABELS } from "../lib/schedule";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, TrashIcon } from "./Icons";
 import { DependencyEditor } from "./DependencyEditor";
+import { DependencyArrows } from "./DependencyArrows";
 import { GanttCells, GanttDayHeaders, GanttMonthHeaders } from "./GanttTimeline";
 
 interface ScheduleGridProps {
@@ -202,6 +203,7 @@ function RemovedScheduleRow({
 
 export function ScheduleGrid(props: ScheduleGridProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const centeredToday = useRef(false);
   const timelineKey = props.timelineDays.join("|");
   const previousById = new Map(
@@ -234,7 +236,8 @@ export function ScheduleGrid(props: ScheduleGridProps) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div ref={scrollerRef} className={`schedule-scroller ${props.editing ? "is-editing" : ""}`}>
-        <table className="schedule-table">
+        <div ref={canvasRef} className="schedule-canvas">
+          <table className="schedule-table">
           {props.timelineDays.length > 0 ? (
             <colgroup>
               {Array.from({ length: 11 }, (_, index) => <col key={`schedule-column-${index}`} />)}
@@ -279,10 +282,18 @@ export function ScheduleGrid(props: ScheduleGridProps) {
               ))}
             </tbody>
           ) : null}
-        </table>
-        <datalist id="assignee-options">
-          {props.assignees.map((assignee) => <option value={assignee.name} key={assignee.id} />)}
-        </datalist>
+          </table>
+          <DependencyArrows
+            containerRef={canvasRef}
+            items={props.allItems ?? props.items}
+            selectedId={props.selectedAnalysisId}
+            predecessorIds={props.predecessorIds}
+            successorIds={props.successorIds}
+          />
+          <datalist id="assignee-options">
+            {props.assignees.map((assignee) => <option value={assignee.name} key={assignee.id} />)}
+          </datalist>
+        </div>
       </div>
     </DndContext>
   );

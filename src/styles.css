@@ -85,6 +85,7 @@ main { flex: 1; min-width: 0; }
 .edit-actions span { color: #6d7f98; font-size: 12px; }
 .schedule-frame { margin: 0 24px 22px; border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; box-shadow: 0 8px 24px rgba(32,61,103,.07); }
 .schedule-scroller { max-height: max(360px, calc(100vh - 480px)); min-height: 360px; overflow: auto; scrollbar-color: #adb9c8 #eff3f7; scrollbar-width: thin; }
+.schedule-canvas { position: relative; width: max-content; min-width: 100%; }
 .schedule-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: max-content; font-size: 12px; color: #17325c; }
 .schedule-table th, .schedule-table td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fff; padding: 7px 9px; height: var(--row-height); vertical-align: middle; }
 .schedule-table th { position: sticky; top: 0; z-index: 7; height: var(--header-top); background: #f9fbfd; color: #17325c; text-align: center; font-size: 11px; font-weight: 750; white-space: nowrap; }
@@ -144,11 +145,21 @@ button.dependency-chip { cursor: pointer; }
 .predecessor-key { color: #8064a2; }
 .selected-key { color: #0f56d9; }
 .successor-key { color: #d8651f; }
+.hidden-dependency-key { color: #6c7d94; font-size: 11px; }
 .schedule-modes .button { height: 32px; margin-left: auto; }
 .dependency-selected { outline: 2px solid #0f56d9; outline-offset: -2px; }
 .dependency-predecessor .row-number { box-shadow: inset 4px 0 #8064a2; }
 .dependency-successor .row-number { box-shadow: inset 4px 0 #ed7d31; }
 .dependency-unrelated { opacity: .38; }
+.dependency-arrow-overlay { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: visible; }
+.dependency-arrow { fill: none; stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter; vector-effect: non-scaling-stroke; }
+.dependency-arrow.predecessor { stroke: #8064a2; }
+.dependency-arrow.successor { stroke: #d8651f; }
+.dependency-arrowhead.predecessor { fill: #8064a2; }
+.dependency-arrowhead.successor { fill: #d8651f; }
+.dependency-arrow-label { font-size: 11px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.dependency-arrow-label.predecessor { fill: #8064a2; }
+.dependency-arrow-label.successor { fill: #d8651f; }
 .comparison-toolbar { flex-wrap: wrap; }
 .comparison-toolbar > .button:first-child { margin-left: 0; }
 .comparison-select { display: flex; align-items: center; gap: 7px; }

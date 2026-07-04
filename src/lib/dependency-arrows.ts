@@ -62,7 +62,7 @@ export function selectDependencyArrowEdges({
     }
   }
 
-  return edges.toSorted((left, right) => {
+  return edges.sort((left, right) => {
     const fromDifference = (byId.get(left.fromId)?.position ?? 0)
       - (byId.get(right.fromId)?.position ?? 0);
     if (fromDifference !== 0) return fromDifference;

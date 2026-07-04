@@ -47,7 +47,7 @@ function rect(left: number, right: number, centerY: number): DOMRect {
     width: right - left,
     height: 20,
     toJSON: () => ({}),
-  } as DOMRect;
+  };
 }
 
 function Harness({

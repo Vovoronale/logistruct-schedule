@@ -119,6 +119,53 @@ describe("ScheduleGrid calendar columns", () => {
     expect(onToggleAnalysis).toHaveBeenCalledWith("b");
   });
 
+  it("renders dependency routes over the gantt and keeps hidden links unfinished", async () => {
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function getBoundingClientRect(this: HTMLElement) {
+        if (this.classList.contains("schedule-canvas")) {
+          return { left: 0, right: 500, top: 0, bottom: 300, width: 500, height: 300 } as DOMRect;
+        }
+        const id = this.dataset.ganttItem;
+        const row = id === "b" ? 120 : 180;
+        return { left: 300, right: 332, top: row, bottom: row + 20, width: 32, height: 20 } as DOMRect;
+      });
+    const allItems = [
+      { ...item, id: "a", position: 1 },
+      { ...item, id: "b", position: 2, startMode: "dependencies" as const, predecessorIds: ["a"] },
+      { ...item, id: "c", position: 3, startMode: "dependencies" as const, predecessorIds: ["b"] },
+    ];
+
+    const { container } = render(
+      <ScheduleGrid
+        items={allItems.slice(1)}
+        allItems={allItems}
+        timelineDays={["2026-07-03"]}
+        today="2026-07-03"
+        editing={false}
+        assignees={[]}
+        selectedAnalysisId="b"
+        predecessorIds={new Set(["a"])}
+        successorIds={new Set(["c"])}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    const overlay = await screen.findByTestId("dependency-arrow-overlay");
+    expect(container.querySelector(".schedule-canvas")?.contains(overlay)).toBe(true);
+    expect(overlay.querySelectorAll('path[data-arrow-kind="complete"]')).toHaveLength(1);
+    expect(overlay.querySelector('path[data-arrow-kind="hidden-predecessor"]'))
+      .toBeInTheDocument();
+    expect(screen.getByText("…")).toBeInTheDocument();
+  });
+
   it("marks changed and added work and renders removed historical work", () => {
     const previous = { ...item, id: "changed", startDate: "2026-07-03" };
     const current = { ...previous, startDate: "2026-07-06" };

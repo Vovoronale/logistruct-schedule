@@ -48,6 +48,7 @@ export function ScheduleModes({
         <span className="analysis-key predecessor-key">Попередники</span>
         <span className="analysis-key selected-key">Вибрана робота</span>
         <span className="analysis-key successor-key">Наступники</span>
+        <span className="hidden-dependency-key">… — пов’язана робота прихована фільтром</span>
         <button className="button ghost" type="button" onClick={onClearAnalysis}>
           Очистити підсвічування
         </button>
