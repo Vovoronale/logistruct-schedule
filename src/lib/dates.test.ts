@@ -33,8 +33,24 @@ describe("timeline helpers", () => {
     expect(days.at(-1)).toBe("2026-07-09");
   });
 
-  it("returns an empty range when no row is scheduled", () => {
-    expect(buildTimelineDays([{ startDate: null, durationDays: null }])).toEqual([]);
+  it("includes today even when scheduled work is later", () => {
+    const days = buildTimelineDays(
+      [{ startDate: "2026-08-03", durationDays: 2 }],
+      "2026-07-03",
+    );
+
+    expect(days).toContain("2026-07-03");
+    expect(days).toContain("2026-08-05");
+  });
+
+  it("shows a useful today range when no row is scheduled", () => {
+    expect(buildTimelineDays([], "2026-07-03")).toEqual([
+      "2026-07-01",
+      "2026-07-02",
+      "2026-07-03",
+      "2026-07-04",
+      "2026-07-05",
+    ]);
   });
 });
 

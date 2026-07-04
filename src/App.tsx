@@ -7,10 +7,13 @@ import { FilterBar } from "./components/FilterBar";
 import { LoginDialog } from "./components/LoginDialog";
 import { ProgressOverview } from "./components/ProgressOverview";
 import { ScheduleGrid } from "./components/ScheduleGrid";
+import { ScheduleModes } from "./components/ScheduleModes";
 import { Toast } from "./components/Toast";
 import { useSchedule } from "./hooks/useSchedule";
 import { useToday } from "./hooks/useToday";
+import { compareSchedules } from "./lib/comparison";
 import { buildTimelineDays } from "./lib/dates";
+import { dependencyRelations } from "./lib/dependencies";
 import { calculateScheduleProgress } from "./lib/progress";
 import { filterItems, type ScheduleFilters, uniqueSorted } from "./lib/schedule";
 import "./styles.css";
@@ -23,11 +26,24 @@ export default function App() {
   const [filters, setFilters] = useState<ScheduleFilters>(EMPTY_FILTERS);
   const [loginOpen, setLoginOpen] = useState(false);
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const deferredQuery = useDeferredValue(filters.query);
   const effectiveFilters = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
   const filteredItems = useMemo(() => filterItems(schedule.items, effectiveFilters), [schedule.items, effectiveFilters]);
-  const timelineDays = useMemo(() => buildTimelineDays(schedule.items), [schedule.items]);
+  const comparison = useMemo(
+    () => schedule.comparisonSnapshot && schedule.saved
+      ? compareSchedules(schedule.saved.items, schedule.comparisonSnapshot.items)
+      : null,
+    [schedule.comparisonSnapshot, schedule.saved],
+  );
+  const timelineItems = useMemo(
+    () => schedule.comparisonSnapshot
+      ? [...schedule.items, ...schedule.comparisonSnapshot.items]
+      : schedule.items,
+    [schedule.comparisonSnapshot, schedule.items],
+  );
+  const timelineDays = useMemo(() => buildTimelineDays(timelineItems, today), [timelineItems, today]);
   const progress = useMemo(
     () => calculateScheduleProgress(schedule.items, today),
     [schedule.items, today],
@@ -38,6 +54,15 @@ export default function App() {
     const configured = schedule.assignees.map((person) => person.name);
     return [...configured, ...assignedNames.filter((name) => !configured.includes(name))];
   }, [assignedNames, schedule.assignees]);
+  const selectedAnalysisId = analysisId && schedule.items.some((item) => item.id === analysisId)
+    ? analysisId
+    : null;
+  const relations = useMemo(
+    () => selectedAnalysisId
+      ? dependencyRelations(schedule.items, selectedAnalysisId)
+      : { predecessors: new Set<string>(), successors: new Set<string>() },
+    [schedule.items, selectedAnalysisId],
+  );
 
   const requestEdit = () => {
     if (!schedule.beginEditing()) setLoginOpen(true);
@@ -82,7 +107,9 @@ export default function App() {
         {schedule.isEditing ? (
           <EditActions
             dirty={schedule.isDirty}
+            canSave={schedule.canSave}
             saving={schedule.saving}
+            error={schedule.dependencyError?.message}
             onAdd={schedule.addItem}
             onManageAssignees={() => setAssigneeDialogOpen(true)}
             onSave={() => void save()}
@@ -92,6 +119,25 @@ export default function App() {
         {!schedule.loading && schedule.saved ? (
           <ProgressOverview progress={progress} />
         ) : null}
+        <ScheduleModes
+          analysisActive={selectedAnalysisId !== null}
+          onClearAnalysis={() => setAnalysisId(null)}
+          editing={schedule.isEditing}
+          history={schedule.history}
+          historyLoading={schedule.historyLoading}
+          historyError={schedule.historyError}
+          comparison={comparison}
+          selectedRevision={schedule.comparisonSnapshot?.revision}
+          onOpenComparison={() => {
+            setAnalysisId(null);
+            void schedule.loadHistory();
+          }}
+          onSelectRevision={(revision) => {
+            setAnalysisId(null);
+            void schedule.selectHistoryRevision(revision);
+          }}
+          onClearComparison={schedule.clearComparison}
+        />
         {schedule.loading ? (
           <div className="loading-state" role="status"><span /><p>Завантажуємо графік…</p></div>
         ) : null}
@@ -106,10 +152,21 @@ export default function App() {
           <section className="schedule-frame" aria-label="Графік креслень">
             <ScheduleGrid
               items={filteredItems}
+              allItems={schedule.items}
               timelineDays={timelineDays}
               today={today}
               editing={schedule.isEditing}
               assignees={schedule.assignees}
+              dependencyError={schedule.dependencyError}
+              selectedAnalysisId={selectedAnalysisId}
+              predecessorIds={relations.predecessors}
+              successorIds={relations.successors}
+              onToggleAnalysis={(id) => {
+                schedule.clearComparison();
+                setAnalysisId((current) => current === id ? null : id);
+              }}
+              comparison={comparison}
+              previousItems={schedule.comparisonSnapshot?.items}
               onUpdate={schedule.updateItem}
               onDelete={remove}
               onReorder={schedule.reorderItem}
