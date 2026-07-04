@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import App from "./App";
 
 const schedule = {
@@ -58,5 +59,62 @@ describe("schedule application", () => {
     render(<App />);
     expect(await screen.findByRole("button", { name: "Редагувати" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Додати рядок" })).not.toBeInTheDocument();
+  });
+
+  it("loads and displays a retained schedule comparison", async () => {
+    const user = userEvent.setup();
+    const current = {
+      ...schedule,
+      revision: 2,
+      items: [{
+        ...schedule.items[0],
+        startDate: "2026-07-08",
+        durationDays: 2,
+      }],
+    };
+    const previous = {
+      ...current,
+      revision: 1,
+      updatedAt: "2026-07-02T00:00:00Z",
+      items: [
+        { ...current.items[0], startDate: "2026-07-06" },
+        {
+          ...current.items[0],
+          id: "drawing-removed",
+          position: 2,
+          title: "Видалене креслення",
+        },
+      ],
+    };
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = input instanceof Request
+        ? input.url
+        : input instanceof URL
+          ? input.href
+          : input;
+      const body = url.includes("/api/auth/session")
+        ? { authenticated: false }
+        : url.endsWith("/api/schedule/history/1")
+          ? previous
+          : url.endsWith("/api/schedule/history")
+            ? [{ revision: 1, savedAt: previous.updatedAt }]
+            : current;
+      return Promise.resolve(new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    }));
+    render(<App />);
+    await screen.findByText(current.items[0].title);
+
+    await user.click(screen.getByRole("button", { name: "Порівняти" }));
+    await user.selectOptions(
+      await screen.findByLabelText("Версія для порівняння"),
+      "1",
+    );
+
+    expect(await screen.findByText("Видалено: 1")).toBeVisible();
+    expect(screen.getByText("Видалене креслення")).toBeVisible();
+    expect(screen.getAllByLabelText(/Попередня версія:/).length).toBeGreaterThan(0);
   });
 });

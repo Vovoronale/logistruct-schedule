@@ -36,15 +36,28 @@ export function GanttDayHeaders({ days, today = todayIso() }: { days: string[]; 
   ));
 }
 
-export function GanttCells({ item, days, assignees, today = todayIso() }: { item: ScheduleItem; days: string[]; assignees: Assignee[]; today?: string }) {
+export function GanttCells({ item, previousItem, days, assignees, today = todayIso() }: { item: ScheduleItem; previousItem?: ScheduleItem; days: string[]; assignees: Assignee[]; today?: string }) {
   const end = addWorkingDays(item.startDate, item.durationDays);
   const active = days.map((day) => Boolean(item.startDate && end && day >= item.startDate && day < end));
+  const previousEnd = addWorkingDays(
+    previousItem?.startDate ?? null,
+    previousItem?.durationDays ?? null,
+  );
+  const previousActive = days.map((day) => Boolean(
+    previousItem?.startDate
+    && previousEnd
+    && day >= previousItem.startDate
+    && day < previousEnd,
+  ));
   const color = assigneeColor(item.assignee, assignees);
   const textColor = readableTextColor(color);
   return days.map((day, index) => {
     const isActive = active[index];
     const isFirst = isActive && !active[index - 1];
     const isLast = isActive && !active[index + 1];
+    const wasActive = previousActive[index];
+    const wasFirst = wasActive && !previousActive[index - 1];
+    const wasLast = wasActive && !previousActive[index + 1];
     const isPast = day < today;
     return (
       <td
@@ -52,6 +65,12 @@ export function GanttCells({ item, days, assignees, today = todayIso() }: { item
         data-date={day}
         key={day}
       >
+        {wasActive && previousItem ? (
+          <span
+            className={`gantt-bar historical-bar ${wasFirst ? "first" : ""} ${wasLast ? "last" : ""}`}
+            aria-label={`Попередня версія: ${previousItem.title}`}
+          />
+        ) : null}
         {isActive ? (
           <span
             className={`gantt-bar ${isFirst ? "first" : ""} ${isLast ? "last" : ""} ${isPast ? "past-bar" : ""}`}

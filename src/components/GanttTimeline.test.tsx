@@ -64,3 +64,24 @@ describe("Gantt today styling", () => {
     expect(todayBar).toHaveStyle({ backgroundColor: "#00B050" });
   });
 });
+
+it("draws a historical outline behind a shifted current bar", () => {
+  const previousItem = { ...item, startDate: "2026-07-06" };
+  const currentItem = { ...item, startDate: "2026-07-08" };
+  const { container } = render(
+    <table><tbody><tr>
+      <GanttCells
+        item={currentItem}
+        previousItem={previousItem}
+        days={["2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09"]}
+        assignees={assignees}
+        today="2026-07-01"
+      />
+    </tr></tbody></table>,
+  );
+
+  expect(container.querySelector('td[data-date="2026-07-06"] .historical-bar'))
+    .toHaveAttribute("aria-label", "Попередня версія: Робота A");
+  expect(container.querySelector('td[data-date="2026-07-08"] .gantt-bar:not(.historical-bar)'))
+    .toBeInTheDocument();
+});

@@ -115,4 +115,39 @@ describe("ScheduleGrid calendar columns", () => {
     }));
     expect(onToggleAnalysis).toHaveBeenCalledWith("b");
   });
+
+  it("marks changed and added work and renders removed historical work", () => {
+    const previous = { ...item, id: "changed", startDate: "2026-07-03" };
+    const current = { ...previous, startDate: "2026-07-06" };
+    const added = { ...item, id: "added", position: 2 };
+    const removed = { ...item, id: "removed", position: 3, title: "Видалена робота" };
+    const comparison = {
+      addedIds: ["added"],
+      removedItems: [removed],
+      changed: [{ id: "changed", fields: ["startDate" as const] }],
+      rescheduledIds: ["changed"],
+    };
+
+    const { container } = render(
+      <ScheduleGrid
+        items={[current, added]}
+        allItems={[current, added]}
+        previousItems={[previous, removed]}
+        comparison={comparison}
+        timelineDays={["2026-07-03", "2026-07-06"]}
+        editing={false}
+        assignees={[]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("schedule-row-added")).toHaveClass("comparison-added");
+    expect(screen.getByTestId("schedule-row-changed").querySelector(".changed-cell"))
+      .toHaveAttribute("title", expect.stringContaining("Було:"));
+    expect(container.querySelector(".removed-items")).toHaveTextContent("Видалена робота");
+    expect(container.querySelector(".removed-items")).toHaveTextContent("Видалено");
+  });
 });

@@ -130,6 +130,16 @@ button.dependency-chip { cursor: pointer; }
 .dependency-predecessor .row-number { box-shadow: inset 4px 0 #8064a2; }
 .dependency-successor .row-number { box-shadow: inset 4px 0 #ed7d31; }
 .dependency-unrelated { opacity: .38; }
+.comparison-toolbar { flex-wrap: wrap; }
+.comparison-toolbar > .button:first-child { margin-left: 0; }
+.comparison-select { display: flex; align-items: center; gap: 7px; }
+.comparison-select span { color: #526985; font-size: 11px; }
+.comparison-select select { height: 32px; max-width: 250px; border: 1px solid var(--line-strong); border-radius: 6px; color: #17325c; background: #fff; }
+.comparison-added .row-number { box-shadow: inset 4px 0 #2f8a46; }
+.removed-items td, .removed-items .sticky-col { color: #8f3030; background: #fff1f1 !important; }
+.status-badge.removed { color: #902e2e; background: #ffdada; }
+.changed-cell { position: relative; }
+.changed-cell::after { content: ""; position: absolute; right: 2px; top: 2px; border: 4px solid transparent; border-top-color: #d58a00; border-right-color: #d58a00; }
 .assignee-code { font-weight: 750; letter-spacing: .02em; }
 .month-header { min-width: 32px; height: var(--header-top) !important; background: #f7f9fc !important; text-transform: capitalize; }
 .timeline-day-column, .day-header, .timeline-cell { width: var(--day-column-width); min-width: var(--day-column-width); max-width: var(--day-column-width); }
@@ -144,6 +154,7 @@ button.dependency-chip { cursor: pointer; }
 .timeline-cell { padding: 0 !important; position: relative; }
 .gantt-bar { position: absolute; left: 0; right: 0; top: 16px; height: 27px; display: flex; align-items: center; padding: 0 7px; z-index: 1; font-weight: 750; font-size: 10px; white-space: nowrap; overflow: visible; box-shadow: inset 0 0 0 1px rgba(14,42,78,.06); }
 .gantt-bar.past-bar { filter: saturate(0); }
+.historical-bar { top: 10px; height: 39px; z-index: 0; border: 2px dashed #5f6f84; background: rgba(255,255,255,.48); box-shadow: none; pointer-events: none; }
 .gantt-bar.first { border-radius: 5px 0 0 5px; }
 .gantt-bar.last { border-radius: 0 5px 5px 0; }
 .gantt-bar.first.last { border-radius: 5px; }
