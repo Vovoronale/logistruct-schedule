@@ -64,6 +64,13 @@ beforeEach(() => {
 });
 
 describe("schedule application", () => {
+  it("identifies the company and construction object in the header", () => {
+    render(<App />);
+
+    expect(screen.getByText("LogiStruct")).toBeVisible();
+    expect(screen.getByText("Об’єкт: Аквапарк «Став»")).toBeVisible();
+  });
+
   it("renders useful schedule columns and omits technical Excel columns", async () => {
     render(<App />);
     expect(await screen.findByText("Найменування креслення")).toBeVisible();

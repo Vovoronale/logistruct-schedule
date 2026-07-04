@@ -31,9 +31,10 @@ export function AppHeader({
     <header className="app-header">
       <div className="brand-block">
         <div className="brand-mark" aria-hidden="true">L</div>
-        <div>
+        <div className="brand-copy">
+          <span className="company-name">LogiStruct</span>
           <h1>Графік випуску креслень</h1>
-          <p>Конструктивні рішення · актуальний план</p>
+          <p className="object-name">Об’єкт: Аквапарк «Став»</p>
         </div>
       </div>
       <div className="header-actions">
