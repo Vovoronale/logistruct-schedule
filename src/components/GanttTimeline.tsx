@@ -74,6 +74,9 @@ export function GanttCells({ item, previousItem, days, assignees, today = todayI
         {isActive ? (
           <span
             className={`gantt-bar ${isFirst ? "first" : ""} ${isLast ? "last" : ""} ${isPast ? "past-bar" : ""}`}
+            data-gantt-item={item.id}
+            data-gantt-start={isFirst ? "true" : undefined}
+            data-gantt-end={isLast ? "true" : undefined}
             style={isPast
               ? { backgroundColor: "#A8B0BC", color: "#FFFFFF" }
               : { backgroundColor: color, color: textColor }}

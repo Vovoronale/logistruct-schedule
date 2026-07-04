@@ -65,6 +65,30 @@ describe("Gantt today styling", () => {
   });
 });
 
+it("marks the first and last current bar segments as dependency anchors", () => {
+  const { container } = render(
+    <table><tbody><tr>
+      <GanttCells
+        item={item}
+        days={["2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09"]}
+        assignees={assignees}
+        today="2026-07-01"
+      />
+    </tr></tbody></table>,
+  );
+
+  const firstCurrentBar = container.querySelector(
+    'td[data-date="2026-07-06"] .gantt-bar',
+  );
+  const lastCurrentBar = container.querySelector(
+    'td[data-date="2026-07-09"] .gantt-bar',
+  );
+  expect(firstCurrentBar).toHaveAttribute("data-gantt-item", "a");
+  expect(firstCurrentBar).toHaveAttribute("data-gantt-start", "true");
+  expect(lastCurrentBar).toHaveAttribute("data-gantt-item", "a");
+  expect(lastCurrentBar).toHaveAttribute("data-gantt-end", "true");
+});
+
 it("draws a historical outline behind a shifted current bar", () => {
   const previousItem = { ...item, startDate: "2026-07-06" };
   const currentItem = { ...item, startDate: "2026-07-08" };
@@ -82,6 +106,8 @@ it("draws a historical outline behind a shifted current bar", () => {
 
   expect(container.querySelector('td[data-date="2026-07-06"] .historical-bar'))
     .toHaveAttribute("aria-label", "Попередня версія: Робота A");
+  expect(container.querySelector('td[data-date="2026-07-06"] .historical-bar'))
+    .not.toHaveAttribute("data-gantt-item");
   expect(container.querySelector('td[data-date="2026-07-08"] .gantt-bar:not(.historical-bar)'))
     .toBeInTheDocument();
 });
