@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createDemoFixture, renderFixtureSql } from "./test-data.mjs";
+import { createDemoFixture, renderFixtureSqlChunks } from "./test-data.mjs";
 
 const DATABASE = "logistruct-schedule-db";
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -18,14 +18,18 @@ export function assertSafeTestStatePath(root, candidate) {
   }
 }
 
-function npxCommand() {
-  return process.platform === "win32" ? "npx.cmd" : "npx";
+export function wranglerInvocation(root, nodePath = process.execPath) {
+  return {
+    command: nodePath,
+    prefix: [resolve(root, "node_modules", "wrangler", "bin", "wrangler.js")],
+  };
 }
 
 function runWrangler(argumentsList, { json = false } = {}) {
+  const invocation = wranglerInvocation(ROOT);
   const result = spawnSync(
-    npxCommand(),
-    ["wrangler", ...argumentsList],
+    invocation.command,
+    [...invocation.prefix, ...argumentsList],
     {
       cwd: ROOT,
       encoding: "utf8",
@@ -100,18 +104,24 @@ async function seed() {
   const anchorDate = process.env.TEST_DATA_DATE ?? new Date().toISOString().slice(0, 10);
   const fixture = createDemoFixture(items, assignees, anchorDate);
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "logistruct-test-data-"));
-  const sqlPath = join(temporaryDirectory, "seed.sql");
   try {
-    await writeFile(sqlPath, renderFixtureSql(fixture), "utf8");
-    runWrangler([
-      "d1",
-      "execute",
-      DATABASE,
-      ...localArguments(),
-      "--file",
-      sqlPath,
-      "--yes",
-    ]);
+    const sqlChunks = renderFixtureSqlChunks(fixture);
+    for (const [index, sql] of sqlChunks.entries()) {
+      const sqlPath = join(
+        temporaryDirectory,
+        `seed-${String(index + 1).padStart(3, "0")}.sql`,
+      );
+      await writeFile(sqlPath, sql, "utf8");
+      runWrangler([
+        "d1",
+        "execute",
+        DATABASE,
+        ...localArguments(),
+        "--file",
+        sqlPath,
+        "--yes",
+      ]);
+    }
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

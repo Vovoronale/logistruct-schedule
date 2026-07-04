@@ -4,7 +4,7 @@
 
 **Goal:** Build a reproducible, isolated Cloudflare Pages test server populated with rich demo data derived from the repository's 68 drawing records.
 
-**Architecture:** A pure ECMAScript module will transform the migrated D1 rows into a deterministic fixture and transactional SQL. A narrow CLI module will own filesystem safety checks and Wrangler subprocesses, always passing an absolute `.wrangler/test-state` persistence path so the normal local and remote databases remain untouched.
+**Architecture:** A pure ECMAScript module will transform the migrated D1 rows into a deterministic fixture and size-bounded D1 batches. A narrow CLI module will own filesystem safety checks and Wrangler subprocesses, always passing an absolute `.wrangler/test-state` persistence path so the normal local and remote databases remain untouched.
 
 **Tech Stack:** Node.js ESM, Vitest, Cloudflare Wrangler Pages/D1, SQLite SQL, React smoke testing through the in-app browser.
 
@@ -170,15 +170,16 @@ git commit -m "feat: generate comprehensive test schedule data"
 Add tests that import `renderFixtureSql` from `scripts/test-data.mjs` and `assertSafeTestStatePath` from `scripts/test-db.mjs`:
 
 ```ts
-it("renders an idempotent transaction with escaped snapshots", () => {
+it("renders idempotent D1 batches with escaped snapshots", () => {
   const fixture = createDemoFixture(baseItems, assignees, "2026-07-04");
   fixture.items[0].title = "Креслення з 'апострофом'";
   const sql = renderFixtureSql(fixture);
-  expect(sql).toContain("BEGIN IMMEDIATE;");
+  expect(sql).not.toContain("BEGIN IMMEDIATE;");
+  expect(sql).not.toContain("COMMIT;");
   expect(sql).toContain("DELETE FROM item_dependencies;");
   expect(sql).toContain("DELETE FROM schedule_history;");
   expect(sql).toContain("Креслення з ''апострофом''");
-  expect(sql.trim().endsWith("COMMIT;")).toBe(true);
+  expect(sql.trim().endsWith(";")).toBe(true);
 });
 
 it("only accepts the repository test-state directory", () => {
@@ -200,7 +201,7 @@ Expected: FAIL because SQL rendering and CLI path validation are missing.
 
 - [ ] **Step 3: Implement SQL serialization**
 
-Add `sqlString(value)` and `renderFixtureSql(fixture)` to `scripts/test-data.mjs`. The transaction must:
+Add `sqlString(value)`, `renderFixtureSql(fixture)`, and `renderFixtureSqlChunks(fixture, maxBytes)` to `scripts/test-data.mjs`. Wrangler sends each file as an implicit transactional D1 batch, so generated SQL must not contain unsupported manual `BEGIN` or `COMMIT`. Each batch must stay below 80 KB and the ordered statements must:
 
 1. Delete existing dependencies and history.
 2. Update exactly the 68 migrated rows with fixture values.

@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 const DAY_MS = 86_400_000;
 
 const DURATIONS = [1, 2, 3, 5, 8, 10];
@@ -263,11 +265,9 @@ function snapshotJson(snapshot) {
   });
 }
 
-export function renderFixtureSql(fixture) {
+function fixtureStatements(fixture) {
   validateFixture(fixture);
   const lines = [
-    "PRAGMA foreign_keys = ON;",
-    "BEGIN IMMEDIATE;",
     "DELETE FROM item_dependencies;",
     "DELETE FROM schedule_history;",
     "UPDATE schedule_items SET position = position + 1000;",
@@ -310,7 +310,39 @@ VALUES (${sqlInteger(snapshot.revision)}, ${sqlString(snapshot.savedAt)}, ${sqlS
 SET revision = ${sqlInteger(fixture.revision)},
     updated_at = ${sqlString(fixture.updatedAt)}
 WHERE id = 1;`,
-    "COMMIT;",
   );
-  return `${lines.join("\n")}\n`;
+  return lines;
+}
+
+function renderBatch(statements) {
+  return `${[
+    "PRAGMA foreign_keys = ON;",
+    ...statements,
+  ].join("\n")}\n`;
+}
+
+export function renderFixtureSql(fixture) {
+  return renderBatch(fixtureStatements(fixture));
+}
+
+export function renderFixtureSqlChunks(fixture, maxBytes = 80_000) {
+  if (!Number.isInteger(maxBytes) || maxBytes < 1) {
+    throw new Error("INVALID_MAX_SQL_BYTES");
+  }
+  const chunks = [];
+  let current = [];
+  for (const statement of fixtureStatements(fixture)) {
+    const candidate = renderBatch([...current, statement]);
+    if (Buffer.byteLength(candidate, "utf8") > maxBytes && current.length > 0) {
+      chunks.push(renderBatch(current));
+      current = [statement];
+      if (Buffer.byteLength(renderBatch(current), "utf8") > maxBytes) {
+        throw new Error("SQL_STATEMENT_EXCEEDS_BATCH_LIMIT");
+      }
+    } else {
+      current.push(statement);
+    }
+  }
+  if (current.length > 0) chunks.push(renderBatch(current));
+  return chunks;
 }

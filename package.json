@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "vite",
     "dev:cf": "npm run build && wrangler pages dev dist",
+    "dev:test": "npm run build && wrangler pages dev dist --ip 127.0.0.1 --port 8788 --persist-to .wrangler/test-state",
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc -b && tsc -p functions/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
+    "db:test:reset": "node scripts/test-db.mjs reset",
+    "db:test:seed": "node scripts/test-db.mjs seed",
     "cf-typegen": "wrangler types --path functions/types.d.ts",
     "deploy": "npm run build && wrangler pages deploy dist --project-name logistruct-schedule"
   },
