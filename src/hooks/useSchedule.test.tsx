@@ -132,7 +132,8 @@ describe("useSchedule dependency editing", () => {
   });
 
   it("keeps an invalid draft visible but disables saving", async () => {
-    const api = client(dependencyPayload);
+    const save = vi.fn().mockResolvedValue(dependencyPayload);
+    const api = client(dependencyPayload, { save });
     const { result } = await editingHook(api);
 
     act(() => {
@@ -147,7 +148,7 @@ describe("useSchedule dependency editing", () => {
       .toBe("Виявлено цикл залежностей");
     expect(result.current.canSave).toBe(false);
     await expect(result.current.save()).rejects.toThrow("Виявлено цикл залежностей");
-    expect(api.save).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
   });
 });
 

@@ -6,9 +6,11 @@ import { EditActions } from "./components/EditActions";
 import { FilterBar } from "./components/FilterBar";
 import { LoginDialog } from "./components/LoginDialog";
 import { ScheduleGrid } from "./components/ScheduleGrid";
+import { ScheduleModes } from "./components/ScheduleModes";
 import { Toast } from "./components/Toast";
 import { useSchedule } from "./hooks/useSchedule";
 import { buildTimelineDays } from "./lib/dates";
+import { dependencyRelations } from "./lib/dependencies";
 import { filterItems, type ScheduleFilters, uniqueSorted } from "./lib/schedule";
 import "./styles.css";
 
@@ -19,6 +21,7 @@ export default function App() {
   const [filters, setFilters] = useState<ScheduleFilters>(EMPTY_FILTERS);
   const [loginOpen, setLoginOpen] = useState(false);
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const deferredQuery = useDeferredValue(filters.query);
   const effectiveFilters = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
@@ -30,6 +33,15 @@ export default function App() {
     const configured = schedule.assignees.map((person) => person.name);
     return [...configured, ...assignedNames.filter((name) => !configured.includes(name))];
   }, [assignedNames, schedule.assignees]);
+  const selectedAnalysisId = analysisId && schedule.items.some((item) => item.id === analysisId)
+    ? analysisId
+    : null;
+  const relations = useMemo(
+    () => selectedAnalysisId
+      ? dependencyRelations(schedule.items, selectedAnalysisId)
+      : { predecessors: new Set<string>(), successors: new Set<string>() },
+    [schedule.items, selectedAnalysisId],
+  );
 
   const requestEdit = () => {
     if (!schedule.beginEditing()) setLoginOpen(true);
@@ -74,13 +86,19 @@ export default function App() {
         {schedule.isEditing ? (
           <EditActions
             dirty={schedule.isDirty}
+            canSave={schedule.canSave}
             saving={schedule.saving}
+            error={schedule.dependencyError?.message}
             onAdd={schedule.addItem}
             onManageAssignees={() => setAssigneeDialogOpen(true)}
             onSave={() => void save()}
             onCancel={cancel}
           />
         ) : null}
+        <ScheduleModes
+          analysisActive={selectedAnalysisId !== null}
+          onClearAnalysis={() => setAnalysisId(null)}
+        />
         {schedule.loading ? (
           <div className="loading-state" role="status"><span /><p>Завантажуємо графік…</p></div>
         ) : null}
@@ -95,9 +113,15 @@ export default function App() {
           <section className="schedule-frame" aria-label="Графік креслень">
             <ScheduleGrid
               items={filteredItems}
+              allItems={schedule.items}
               timelineDays={timelineDays}
               editing={schedule.isEditing}
               assignees={schedule.assignees}
+              dependencyError={schedule.dependencyError}
+              selectedAnalysisId={selectedAnalysisId}
+              predecessorIds={relations.predecessors}
+              successorIds={relations.successors}
+              onToggleAnalysis={(id) => setAnalysisId((current) => current === id ? null : id)}
               onUpdate={schedule.updateItem}
               onDelete={remove}
               onReorder={schedule.reorderItem}

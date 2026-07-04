@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ScheduleItem } from "../types";
 import { ScheduleGrid } from "./ScheduleGrid";
@@ -35,5 +36,54 @@ describe("ScheduleGrid calendar columns", () => {
     );
 
     expect(container.querySelectorAll("col.timeline-day-column")).toHaveLength(3);
+  });
+
+  it("marks selected, predecessor, successor and unrelated rows", async () => {
+    const user = userEvent.setup();
+    const onToggleAnalysis = vi.fn();
+    const items = [
+      { ...item, id: "a", position: 1 },
+      {
+        ...item,
+        id: "b",
+        position: 2,
+        startMode: "dependencies" as const,
+        predecessorIds: ["a"],
+      },
+      {
+        ...item,
+        id: "c",
+        position: 3,
+        startMode: "dependencies" as const,
+        predecessorIds: ["b"],
+      },
+      { ...item, id: "d", position: 4 },
+    ];
+    render(
+      <ScheduleGrid
+        items={items}
+        allItems={items}
+        timelineDays={[]}
+        editing={false}
+        assignees={[]}
+        selectedAnalysisId="b"
+        predecessorIds={new Set(["a"])}
+        successorIds={new Set(["c"])}
+        onToggleAnalysis={onToggleAnalysis}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("schedule-row-a")).toHaveClass("dependency-predecessor");
+    expect(screen.getByTestId("schedule-row-b")).toHaveClass("dependency-selected");
+    expect(screen.getByTestId("schedule-row-c")).toHaveClass("dependency-successor");
+    expect(screen.getByTestId("schedule-row-d")).toHaveClass("dependency-unrelated");
+    await user.click(screen.getByRole("button", {
+      name: "Показати залежності для роботи №2",
+    }));
+    expect(onToggleAnalysis).toHaveBeenCalledWith("b");
   });
 });
