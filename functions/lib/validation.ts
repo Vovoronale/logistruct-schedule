@@ -2,8 +2,10 @@ import type {
   Assignee,
   ScheduleDraft,
   ScheduleItem,
+  ScheduleStartMode,
   ScheduleStatus,
 } from "../../src/types";
+import { DependencyError, recalculateSchedule } from "../../src/lib/dependencies";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ID = /^[A-Za-z0-9_-]{1,100}$/u;
@@ -13,6 +15,7 @@ const STATUSES = new Set<ScheduleStatus>([
   "in_progress",
   "completed",
 ]);
+const START_MODES = new Set<ScheduleStartMode>(["manual", "dependencies"]);
 
 export class ValidationError extends Error {
   readonly field?: string;
@@ -86,6 +89,35 @@ function timestamp(value: unknown, row: number, field: string): string {
   return value;
 }
 
+function startMode(value: unknown, row: number): ScheduleStartMode {
+  if (value === undefined) return "manual";
+  if (typeof value !== "string" || !START_MODES.has(value as ScheduleStartMode)) {
+    throw new ValidationError("Некоректний спосіб початку", row, "startMode");
+  }
+  return value as ScheduleStartMode;
+}
+
+function predecessorIds(value: unknown, row: number): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 1_000) {
+    throw new ValidationError(
+      "Некоректний список залежностей",
+      row,
+      "predecessorIds",
+    );
+  }
+  return value.map((id) => {
+    if (typeof id !== "string" || !ID.test(id)) {
+      throw new ValidationError(
+        "Некоректна пов’язана робота",
+        row,
+        "predecessorIds",
+      );
+    }
+    return id;
+  });
+}
+
 function validateItem(value: unknown, index: number): ScheduleItem {
   const row = index + 1;
   if (!isRecord(value)) throw new ValidationError("Некоректний рядок", row);
@@ -101,10 +133,10 @@ function validateItem(value: unknown, index: number): ScheduleItem {
     section: requiredText(value.section, row, "section", 32),
     sheetNumber: positiveInteger(value.sheetNumber, row, "sheetNumber"),
     title: requiredText(value.title, row, "title", 500),
-    startMode: "manual",
+    startMode: startMode(value.startMode, row),
     startDate: optionalDate(value.startDate, row),
     durationDays: optionalInteger(value.durationDays, row),
-    predecessorIds: [],
+    predecessorIds: predecessorIds(value.predecessorIds, row),
     assignee: optionalText(value.assignee, row),
     status: value.status as ScheduleStatus,
     createdAt: timestamp(value.createdAt, row, "createdAt"),
@@ -169,5 +201,17 @@ export function validateScheduleDraft(value: unknown): ScheduleDraft {
     assigneeIds.add(assignee.id);
     assigneeNames.add(nameKey);
   }
-  return { revision: Number(value.revision), items, assignees };
+  let recalculated: ScheduleItem[];
+  try {
+    recalculated = recalculateSchedule(items);
+  } catch (error) {
+    if (!(error instanceof DependencyError)) throw error;
+    const row = items.findIndex((item) => item.id === error.itemId) + 1;
+    throw new ValidationError(
+      error.message,
+      row || undefined,
+      "predecessorIds",
+    );
+  }
+  return { revision: Number(value.revision), items: recalculated, assignees };
 }

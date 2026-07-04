@@ -85,4 +85,62 @@ describe("validateScheduleDraft", () => {
       assignees: [person("ІВ", "person-1", "green")],
     })).toThrow("Колір має бути у форматі #RRGGBB");
   });
+
+  it("recalculates a dependency date instead of trusting submitted data", () => {
+    const result = validateScheduleDraft({
+      revision: 2,
+      assignees: [],
+      items: [
+        {
+          ...validItem,
+          id: "drawing-a",
+          startDate: "2026-07-06",
+          durationDays: 2,
+        },
+        {
+          ...validItem,
+          id: "drawing-b",
+          startMode: "dependencies",
+          startDate: "2030-01-01",
+          predecessorIds: ["drawing-a"],
+        },
+      ],
+    });
+
+    expect(result.items[1].startDate).toBe("2026-07-08");
+    expect(result.items[1].predecessorIds).toEqual(["drawing-a"]);
+  });
+
+  it("reports dependency cycles against an affected row", () => {
+    expect(() => validateScheduleDraft({
+      revision: 2,
+      assignees: [],
+      items: [
+        {
+          ...validItem,
+          id: "drawing-a",
+          startMode: "dependencies",
+          predecessorIds: ["drawing-b"],
+        },
+        {
+          ...validItem,
+          id: "drawing-b",
+          startMode: "dependencies",
+          predecessorIds: ["drawing-a"],
+        },
+      ],
+    })).toThrow("Виявлено цикл залежностей");
+  });
+
+  it("rejects malformed dependency identifiers", () => {
+    expect(() => validateScheduleDraft({
+      revision: 2,
+      assignees: [],
+      items: [{
+        ...validItem,
+        startMode: "dependencies",
+        predecessorIds: ["bad id"],
+      }],
+    })).toThrow("Некоректна пов’язана робота");
+  });
 });
