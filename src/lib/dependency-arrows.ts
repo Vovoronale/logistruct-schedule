@@ -14,6 +14,8 @@ export interface GanttBarAnchor {
   position: number;
   startX: number;
   endX: number;
+  topY: number;
+  bottomY: number;
   centerY: number;
 }
 
@@ -87,6 +89,17 @@ interface HiddenGroup {
 }
 
 const coordinate = (value: number) => Math.round(value);
+const ENDPOINT_CLEARANCE = 10;
+const LANE_SPACING = 4;
+
+const clamp = (value: number, minimum: number, maximum: number) =>
+  Math.min(maximum, Math.max(minimum, value));
+
+const laneOffset = (lane: number) => {
+  if (lane === 0) return 0;
+  const magnitude = Math.ceil(lane / 2) * LANE_SPACING;
+  return lane % 2 === 1 ? magnitude : -magnitude;
+};
 
 function completeRoute(
   edge: DependencyArrowEdge,
@@ -94,14 +107,24 @@ function completeRoute(
   to: GanttBarAnchor,
   lane: number,
 ): DependencyArrowRoute {
-  const horizontalGap = Math.abs(to.startX - from.endX);
-  const channelOffset = Math.max(10, Math.min(26, horizontalGap / 2)) + lane * 4;
-  const channelX = coordinate(from.endX + channelOffset);
+  const sourceX = coordinate(from.endX + ENDPOINT_CLEARANCE);
+  const targetX = coordinate(to.startX - ENDPOINT_CLEARANCE);
+  const movingDown = to.centerY >= from.centerY;
+  const gapStart = movingDown ? from.bottomY : to.bottomY;
+  const gapEnd = movingDown ? to.topY : from.topY;
+  const minimumY = Math.min(gapStart, gapEnd);
+  const maximumY = Math.max(gapStart, gapEnd);
+  const midpointY = (minimumY + maximumY) / 2;
+  const channelY = coordinate(clamp(
+    midpointY + laneOffset(lane),
+    minimumY,
+    maximumY,
+  ));
   return {
     id: edge.id,
     tone: edge.tone,
     kind: "complete",
-    path: `M ${coordinate(from.endX)} ${coordinate(from.centerY)} H ${channelX} V ${coordinate(to.centerY)} H ${coordinate(to.startX)}`,
+    path: `M ${coordinate(from.endX)} ${coordinate(from.centerY)} H ${sourceX} V ${channelY} H ${targetX} V ${coordinate(to.centerY)} H ${coordinate(to.startX)}`,
     markerEnd: true,
   };
 }
