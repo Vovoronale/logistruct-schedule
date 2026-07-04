@@ -1,0 +1,60 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { WorkspaceToolbar } from "./WorkspaceToolbar";
+
+const filters = { query: "", section: "", assignee: "", status: "" } as const;
+
+describe("WorkspaceToolbar", () => {
+  it("renders compact schedule controls and reports filter changes", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <WorkspaceToolbar
+        filters={filters}
+        sections={["КЗ-0"]}
+        assignees={["Іван"]}
+        visibleCount={12}
+        totalCount={68}
+        openPanel={null}
+        onChange={onChange}
+        onTogglePanel={vi.fn()}
+        onCompare={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("12 із 68 креслень")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Прогрес" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Виконавці" })).toHaveAttribute("aria-controls", "assignees-panel");
+
+    await user.type(screen.getByRole("textbox", { name: "Пошук креслення" }), "п");
+    expect(onChange).toHaveBeenLastCalledWith({ ...filters, query: "п" });
+  });
+
+  it("opens one information panel and starts comparison through callbacks", async () => {
+    const user = userEvent.setup();
+    const onTogglePanel = vi.fn();
+    const onCompare = vi.fn();
+
+    render(
+      <WorkspaceToolbar
+        filters={filters}
+        sections={[]}
+        assignees={[]}
+        visibleCount={0}
+        totalCount={0}
+        openPanel="progress"
+        onChange={vi.fn()}
+        onTogglePanel={onTogglePanel}
+        onCompare={onCompare}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Прогрес" })).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "Виконавці" }));
+    expect(onTogglePanel).toHaveBeenCalledWith("assignees");
+    await user.click(screen.getByRole("button", { name: "Порівняти" }));
+    expect(onCompare).toHaveBeenCalledOnce();
+  });
+});
