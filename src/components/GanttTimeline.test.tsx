@@ -29,6 +29,15 @@ const item: ScheduleItem = {
 };
 
 describe("Gantt today styling", () => {
+  it("marks configured holidays as weekends", () => {
+    const { container } = render(
+      <table><thead><tr><GanttDayHeaders
+        days={["2026-07-06"]}
+        holidays={new Set(["2026-07-06"])}
+      /></tr></thead></table>,
+    );
+    expect(container.querySelector('th[title="2026-07-06"]')).toHaveClass("weekend");
+  });
   it("marks past and today headers", () => {
     const { container } = render(
       <table><thead><tr>

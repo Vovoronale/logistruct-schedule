@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addWorkingDays,
   buildTimelineDays,
+  isNonWorkingDay,
   isWeekend,
   workingDaysAfter,
 } from "./dates";
@@ -9,6 +10,11 @@ import {
 describe("addWorkingDays", () => {
   it("skips Saturday and Sunday using the workbook semantics", () => {
     expect(addWorkingDays("2026-07-03", 2)).toBe("2026-07-07");
+  });
+
+  it("skips configured holidays", () => {
+    expect(addWorkingDays("2026-07-03", 2, new Set(["2026-07-06"])))
+      .toBe("2026-07-08");
   });
 
   it("returns null for incomplete or invalid values", () => {
@@ -22,6 +28,10 @@ describe("timeline helpers", () => {
   it("recognizes weekends without local-time drift", () => {
     expect(isWeekend("2026-07-04")).toBe(true);
     expect(isWeekend("2026-07-06")).toBe(false);
+  });
+
+  it("recognizes configured non-working days", () => {
+    expect(isNonWorkingDay("2026-07-06", new Set(["2026-07-06"]))).toBe(true);
   });
 
   it("adds two calendar days of padding around scheduled work", () => {
@@ -59,6 +69,14 @@ describe("workingDaysAfter", () => {
     expect(workingDaysAfter("2026-07-03", "2026-07-03")).toBe(0);
     expect(workingDaysAfter("2026-07-03", "2026-07-06")).toBe(1);
     expect(workingDaysAfter("2026-07-03", "2026-07-07")).toBe(2);
+  });
+
+  it("excludes configured holidays", () => {
+    expect(workingDaysAfter(
+      "2026-07-03",
+      "2026-07-07",
+      new Set(["2026-07-06"]),
+    )).toBe(1);
   });
 
   it("returns null for invalid dates and zero before the start", () => {

@@ -1,5 +1,5 @@
 import type { ScheduleItem } from "../types";
-import { addWorkingDays } from "./dates";
+import { addWorkingDays, type HolidaySet } from "./dates";
 
 export class DependencyError extends Error {
   constructor(
@@ -11,7 +11,10 @@ export class DependencyError extends Error {
   }
 }
 
-export function recalculateSchedule(items: ScheduleItem[]): ScheduleItem[] {
+export function recalculateSchedule(
+  items: ScheduleItem[],
+  holidays: HolidaySet = new Set(),
+): ScheduleItem[] {
   const rows = new Map(
     items.map((row) => [
       row.id,
@@ -54,6 +57,7 @@ export function recalculateSchedule(items: ScheduleItem[]): ScheduleItem[] {
         const finish = addWorkingDays(
           predecessor.startDate,
           predecessor.durationDays,
+          holidays,
         );
         if (!finish) {
           throw new DependencyError(

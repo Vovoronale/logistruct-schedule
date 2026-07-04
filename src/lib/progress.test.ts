@@ -32,6 +32,14 @@ describe("calculateItemProgress", () => {
     expect(calculateItemProgress(makeItem(), "2026-07-07")).toBe(40);
   });
 
+  it("does not advance on a configured holiday", () => {
+    expect(calculateItemProgress(
+      makeItem(),
+      "2026-07-06",
+      new Set(["2026-07-06"]),
+    )).toBe(0);
+  });
+
   it("stays at zero before the start", () => {
     expect(calculateItemProgress(makeItem(), "2026-07-02")).toBe(0);
   });

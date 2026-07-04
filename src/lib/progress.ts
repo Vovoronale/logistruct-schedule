@@ -1,5 +1,5 @@
 import type { ScheduleItem } from "../types";
-import { addWorkingDays, workingDaysAfter } from "./dates";
+import { addWorkingDays, workingDaysAfter, type HolidaySet } from "./dates";
 
 export interface ProgressSummary {
   percentage: number;
@@ -19,16 +19,17 @@ export interface ScheduleProgress {
 export function calculateItemProgress(
   item: ScheduleItem,
   today: string,
+  holidays: HolidaySet = new Set(),
 ): number | null {
   if (
-    !addWorkingDays(item.startDate, item.durationDays) ||
+    !addWorkingDays(item.startDate, item.durationDays, holidays) ||
     item.durationDays === null
   ) {
     return null;
   }
   if (item.status === "completed") return 100;
 
-  const elapsed = workingDaysAfter(item.startDate!, today);
+  const elapsed = workingDaysAfter(item.startDate!, today, holidays);
   if (elapsed === null) return null;
   return Math.min(95, Math.max(0, (elapsed / item.durationDays) * 100));
 }
@@ -36,6 +37,7 @@ export function calculateItemProgress(
 export function calculateScheduleProgress(
   items: ScheduleItem[],
   today: string,
+  holidays: HolidaySet = new Set(),
 ): ScheduleProgress {
   const groups = new Map<
     string,
@@ -46,7 +48,7 @@ export function calculateScheduleProgress(
   let overallCount = 0;
 
   for (const item of items) {
-    const percentage = calculateItemProgress(item, today);
+    const percentage = calculateItemProgress(item, today, holidays);
     if (percentage === null || item.durationDays === null) continue;
 
     const section = item.section.trim();

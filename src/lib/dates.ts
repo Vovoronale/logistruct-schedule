@@ -1,5 +1,7 @@
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
+export type HolidaySet = ReadonlySet<string>;
+const NO_HOLIDAYS: HolidaySet = new Set<string>();
 
 function parseIsoDate(value: string | null | undefined): Date | null {
   if (!value || !ISO_DATE.test(value)) return null;
@@ -23,9 +25,17 @@ export function isWeekend(value: string): boolean {
   return day === 0 || day === 6;
 }
 
+export function isNonWorkingDay(
+  value: string,
+  holidays: HolidaySet = NO_HOLIDAYS,
+): boolean {
+  return isWeekend(value) || holidays.has(value);
+}
+
 export function addWorkingDays(
   startDate: string | null,
   durationDays: number | null,
+  holidays: HolidaySet = NO_HOLIDAYS,
 ): string | null {
   const start = parseIsoDate(startDate);
   if (!start || !durationDays || durationDays < 1 || !Number.isInteger(durationDays)) {
@@ -36,8 +46,7 @@ export function addWorkingDays(
   let remaining = durationDays;
   while (remaining > 0) {
     cursor = shiftCalendarDays(cursor, 1);
-    const day = cursor.getUTCDay();
-    if (day !== 0 && day !== 6) remaining -= 1;
+    if (!isNonWorkingDay(toIsoDate(cursor), holidays)) remaining -= 1;
   }
   return toIsoDate(cursor);
 }
@@ -45,6 +54,7 @@ export function addWorkingDays(
 export function workingDaysAfter(
   startValue: string,
   endValue: string,
+  holidays: HolidaySet = NO_HOLIDAYS,
 ): number | null {
   const start = parseIsoDate(startValue);
   const end = parseIsoDate(endValue);
@@ -57,8 +67,7 @@ export function workingDaysAfter(
     cursor <= end;
     cursor = shiftCalendarDays(cursor, 1)
   ) {
-    const day = cursor.getUTCDay();
-    if (day !== 0 && day !== 6) count += 1;
+    if (!isNonWorkingDay(toIsoDate(cursor), holidays)) count += 1;
   }
   return count;
 }
@@ -71,13 +80,14 @@ interface TimelineSource {
 export function buildTimelineDays(
   items: TimelineSource[],
   today = todayIso(),
+  holidays: HolidaySet = NO_HOLIDAYS,
 ): string[] {
   let earliest = parseIsoDate(today);
   let latest = parseIsoDate(today);
 
   for (const item of items) {
     const start = parseIsoDate(item.startDate);
-    const endValue = addWorkingDays(item.startDate, item.durationDays);
+    const endValue = addWorkingDays(item.startDate, item.durationDays, holidays);
     const end = parseIsoDate(endValue);
     if (!start || !end) continue;
     if (!earliest || start < earliest) earliest = start;

@@ -108,6 +108,14 @@ describe("recalculateSchedule", () => {
     expect(result[1].startDate).toBe("2026-07-10");
     expect(addWorkingDays(result[1].startDate, 1)).toBe("2026-07-13");
   });
+
+  it("pushes dependencies past configured holidays", () => {
+    const result = recalculateSchedule([
+      item("a", 1, { startDate: "2026-07-06", durationDays: 1 }),
+      item("b", 2, { startMode: "dependencies", predecessorIds: ["a"] }),
+    ], new Set(["2026-07-07"]));
+    expect(result[1].startDate).toBe("2026-07-08");
+  });
 });
 
 describe("dependency traversal", () => {

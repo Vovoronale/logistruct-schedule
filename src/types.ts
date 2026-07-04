@@ -37,6 +37,7 @@ export interface ScheduleDraft {
   revision: number;
   items: ScheduleItem[];
   assignees: Assignee[];
+  holidays: string[];
 }
 
 export interface ScheduleHistoryEntry {

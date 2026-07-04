@@ -14,6 +14,7 @@ import {
   recalculateSchedule,
 } from "../lib/dependencies";
 import { moveItem, normalizePositions } from "../lib/schedule";
+import type { HolidaySet } from "../lib/dates";
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : "Невідома помилка";
@@ -26,7 +27,10 @@ function cloneItems(items: ScheduleItem[]): ScheduleItem[] {
   }));
 }
 
-export function useSchedule(client: ScheduleClient = scheduleClient) {
+export function useSchedule(
+  client: ScheduleClient = scheduleClient,
+  holidays: HolidaySet = new Set(),
+) {
   const [saved, setSaved] = useState<SchedulePayload | null>(null);
   const [draftItems, setDraftItems] = useState<ScheduleItem[]>([]);
   const draftItemsRef = useRef<ScheduleItem[]>([]);
@@ -139,7 +143,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       ? update(draftItemsRef.current)
       : update;
     try {
-      replaceDraftItems(recalculateSchedule(next));
+      replaceDraftItems(recalculateSchedule(next, holidays));
       setDependencyError(null);
       setError(null);
     } catch (draftError) {
@@ -151,7 +155,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       setError(nextError.message);
     }
     setIsDirty(true);
-  }, [replaceDraftItems]);
+  }, [holidays, replaceDraftItems]);
 
   const updateItem = useCallback(
     (id: string, patch: Partial<ScheduleItem>) => {
@@ -245,6 +249,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
         revision: saved.revision,
         items: normalizePositions(draftItemsRef.current),
         assignees: draftAssignees,
+        holidays: [...holidays].sort(),
       });
       setSaved(next);
       replaceDraftItems(cloneItems(next.items));
@@ -260,7 +265,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     } finally {
       setSaving(false);
     }
-  }, [client, dependencyError, draftAssignees, replaceDraftItems, saved]);
+  }, [client, dependencyError, draftAssignees, holidays, replaceDraftItems, saved]);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
