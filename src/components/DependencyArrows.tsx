@@ -63,6 +63,8 @@ function measureAnchors(
       position,
       startX: startRect.left - containerRect.left,
       endX: endRect.right - containerRect.left,
+      topY: startRect.top - containerRect.top,
+      bottomY: startRect.bottom - containerRect.top,
       centerY: (startRect.top + startRect.bottom) / 2 - containerRect.top,
     });
   }
