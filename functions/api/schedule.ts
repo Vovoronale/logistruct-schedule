@@ -1,7 +1,7 @@
 import type { SchedulePayload } from "../../src/types";
 import { isAuthenticated } from "../lib/auth";
 import { json, readJsonBody } from "../lib/http";
-import { type AssigneeRow, type MetaRow, readSchedule } from "../lib/schedule-storage";
+import { readSchedule } from "../lib/schedule-storage";
 import { ValidationError, validateScheduleDraft } from "../lib/validation";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
@@ -20,22 +20,16 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const draft = validateScheduleDraft(await readJsonBody(request));
-    const current = await env.DB.prepare(
-      "SELECT revision, updated_at FROM schedule_meta WHERE id = 1",
-    ).first<MetaRow>();
-    if (!current) throw new Error("SCHEDULE_META_MISSING");
-    if (current.revision !== draft.revision) {
+    const currentSchedule = await readSchedule(env.DB);
+    if (currentSchedule.revision !== draft.revision) {
       return json(
         { error: "Графік уже змінено в іншій вкладці", code: "REVISION_CONFLICT" },
         409,
       );
     }
 
-    const currentAssignees = await env.DB.prepare(
-      "SELECT name FROM assignees ORDER BY position ASC",
-    ).all<Pick<AssigneeRow, "name">>();
     const nextNames = new Set(draft.assignees.map((person) => person.name));
-    for (const existing of currentAssignees.results) {
+    for (const existing of currentSchedule.assignees) {
       if (
         !nextNames.has(existing.name)
         && draft.items.some((item) => item.assignee === existing.name)
@@ -55,13 +49,23 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
            updated_at = ?
        WHERE id = 1`,
     ).bind(draft.revision, now);
+    const insertHistory = env.DB.prepare(
+      `INSERT OR REPLACE INTO schedule_history
+       (revision, saved_at, snapshot_json)
+       VALUES (?, ?, ?)`,
+    ).bind(
+      currentSchedule.revision,
+      currentSchedule.updatedAt,
+      JSON.stringify(currentSchedule),
+    );
+    const deleteDependencies = env.DB.prepare("DELETE FROM item_dependencies");
     const deleteItems = env.DB.prepare("DELETE FROM schedule_items");
     const deleteAssignees = env.DB.prepare("DELETE FROM assignees");
     const insertItem = env.DB.prepare(
       `INSERT INTO schedule_items
-       (id, position, section, sheet_number, title, start_date, duration_days,
-        assignee, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, position, section, sheet_number, title, start_mode, start_date,
+        duration_days, assignee, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const itemInserts = draft.items.map((item) =>
       insertItem.bind(
@@ -70,12 +74,22 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
         item.section,
         item.sheetNumber,
         item.title,
+        item.startMode,
         item.startDate,
         item.durationDays,
         item.assignee,
         item.status,
         item.createdAt,
         now,
+      ),
+    );
+    const insertDependency = env.DB.prepare(
+      `INSERT INTO item_dependencies (item_id, predecessor_id)
+       VALUES (?, ?)`,
+    );
+    const dependencyInserts = draft.items.flatMap((item) =>
+      item.predecessorIds.map((predecessorId) =>
+        insertDependency.bind(item.id, predecessorId),
       ),
     );
     const insertAssignee = env.DB.prepare(
@@ -93,12 +107,24 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env }) => {
         now,
       ),
     );
+    const pruneHistory = env.DB.prepare(
+      `DELETE FROM schedule_history
+       WHERE revision NOT IN (
+         SELECT revision FROM schedule_history
+         ORDER BY revision DESC
+         LIMIT 10
+       )`,
+    );
     await env.DB.batch([
       updateMeta,
+      insertHistory,
+      deleteDependencies,
       deleteItems,
       deleteAssignees,
       ...assigneeInserts,
       ...itemInserts,
+      ...dependencyInserts,
+      pruneHistory,
     ]);
 
     return json({
