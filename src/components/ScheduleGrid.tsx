@@ -206,6 +206,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const centeredToday = useRef(false);
   const timelineKey = props.timelineDays.join("|");
+  const visibleItemsKey = props.items.map((item) => item.id).sort().join("|");
   const previousById = new Map(
     (props.previousItems ?? []).map((item) => [item.id, item]),
   );
@@ -232,6 +233,10 @@ export function ScheduleGrid(props: ScheduleGridProps) {
     );
     centeredToday.current = true;
   }, [timelineKey]);
+
+  useEffect(() => {
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [visibleItemsKey]);
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

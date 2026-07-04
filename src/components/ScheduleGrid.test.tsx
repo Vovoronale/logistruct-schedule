@@ -69,6 +69,29 @@ describe("ScheduleGrid calendar columns", () => {
       .toBe(412);
   });
 
+  it("returns to the first visible row when filtering changes the item set", () => {
+    const secondItem = { ...item, id: "drawing-002", position: 2 };
+    const props = {
+      timelineDays: [] as string[],
+      today: "2026-07-04",
+      editing: false,
+      assignees: [],
+      onUpdate: vi.fn(),
+      onDelete: vi.fn(),
+      onReorder: vi.fn(),
+      onMoveBy: vi.fn(),
+    };
+    const { container, rerender } = render(
+      <ScheduleGrid items={[item, secondItem]} {...props} />,
+    );
+    const scroller = container.querySelector<HTMLElement>(".schedule-scroller")!;
+    scroller.scrollTop = 240;
+
+    rerender(<ScheduleGrid items={[secondItem]} allItems={[item, secondItem]} {...props} />);
+
+    expect(scroller.scrollTop).toBe(0);
+  });
+
   it("marks selected, predecessor, successor and unrelated rows", async () => {
     const user = userEvent.setup();
     const onToggleAnalysis = vi.fn();
