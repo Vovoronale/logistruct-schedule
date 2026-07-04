@@ -111,6 +111,20 @@ describe("validateScheduleDraft", () => {
     expect(result.items[1].predecessorIds).toEqual(["drawing-a"]);
   });
 
+  it("recalculates dependencies with normalized holidays", () => {
+    const result = validateScheduleDraft({
+      revision: 2,
+      assignees: [],
+      holidays: ["2026-07-07", "bad", "2026-07-07"],
+      items: [
+        { ...validItem, id: "drawing-a", startDate: "2026-07-06", durationDays: 1 },
+        { ...validItem, id: "drawing-b", startMode: "dependencies", predecessorIds: ["drawing-a"] },
+      ],
+    });
+    expect(result.items[1].startDate).toBe("2026-07-08");
+    expect(result.holidays).toEqual(["2026-07-07"]);
+  });
+
   it("reports dependency cycles against an affected row", () => {
     expect(() => validateScheduleDraft({
       revision: 2,

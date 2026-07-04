@@ -6,6 +6,7 @@ import type {
   ScheduleStatus,
 } from "../../src/types";
 import { DependencyError, recalculateSchedule } from "../../src/lib/dependencies";
+import { normalizeHolidays } from "../../src/lib/holidays";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ID = /^[A-Za-z0-9_-]{1,100}$/u;
@@ -188,6 +189,7 @@ export function validateScheduleDraft(value: unknown): ScheduleDraft {
     ids.add(item.id);
   }
   const assignees = value.assignees.map(validateAssignee);
+  const holidays = normalizeHolidays(value.holidays);
   const assigneeIds = new Set<string>();
   const assigneeNames = new Set<string>();
   for (const [index, assignee] of assignees.entries()) {
@@ -203,7 +205,7 @@ export function validateScheduleDraft(value: unknown): ScheduleDraft {
   }
   let recalculated: ScheduleItem[];
   try {
-    recalculated = recalculateSchedule(items);
+    recalculated = recalculateSchedule(items, holidays);
   } catch (error) {
     if (!(error instanceof DependencyError)) throw error;
     const row = items.findIndex((item) => item.id === error.itemId) + 1;
@@ -213,5 +215,10 @@ export function validateScheduleDraft(value: unknown): ScheduleDraft {
       "predecessorIds",
     );
   }
-  return { revision: Number(value.revision), items: recalculated, assignees };
+  return {
+    revision: Number(value.revision),
+    items: recalculated,
+    assignees,
+    holidays: [...holidays].sort(),
+  };
 }

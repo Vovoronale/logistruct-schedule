@@ -85,6 +85,22 @@ async function editingHook(api: ScheduleClient) {
   return hook;
 }
 
+it("submits normalized holidays with a saved draft", async () => {
+  const save = vi.fn().mockResolvedValue(payload);
+  const api = client(payload, { save });
+  const { result } = renderHook(() => useSchedule(
+    api,
+    new Set(["2026-07-07"]),
+  ));
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  act(() => { result.current.beginEditing(); });
+  act(() => { result.current.updateItem("drawing-001", { durationDays: 3 }); });
+  await act(async () => { await result.current.save(); });
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({
+    holidays: ["2026-07-07"],
+  }));
+});
+
 describe("useSchedule assignee editing", () => {
   it("renames assigned rows and marks the shared draft dirty", async () => {
     const { result } = await editingHook(client());

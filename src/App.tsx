@@ -11,6 +11,7 @@ import { ScheduleModes } from "./components/ScheduleModes";
 import { Toast } from "./components/Toast";
 import { useSchedule } from "./hooks/useSchedule";
 import { useToday } from "./hooks/useToday";
+import { useHolidays } from "./hooks/useHolidays";
 import { compareSchedules } from "./lib/comparison";
 import { buildTimelineDays } from "./lib/dates";
 import { dependencyRelations } from "./lib/dependencies";
@@ -21,7 +22,8 @@ import "./styles.css";
 const EMPTY_FILTERS: ScheduleFilters = { query: "", section: "", assignee: "", status: "" };
 
 export default function App() {
-  const schedule = useSchedule();
+  const holidays = useHolidays();
+  const schedule = useSchedule(undefined, holidays);
   const today = useToday();
   const [filters, setFilters] = useState<ScheduleFilters>(EMPTY_FILTERS);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -43,10 +45,13 @@ export default function App() {
       : schedule.items,
     [schedule.comparisonSnapshot, schedule.items],
   );
-  const timelineDays = useMemo(() => buildTimelineDays(timelineItems, today), [timelineItems, today]);
+  const timelineDays = useMemo(
+    () => buildTimelineDays(timelineItems, today, holidays),
+    [timelineItems, today, holidays],
+  );
   const progress = useMemo(
-    () => calculateScheduleProgress(schedule.items, today),
-    [schedule.items, today],
+    () => calculateScheduleProgress(schedule.items, today, holidays),
+    [schedule.items, today, holidays],
   );
   const sections = useMemo(() => uniqueSorted(schedule.items, "section"), [schedule.items]);
   const assignedNames = useMemo(() => uniqueSorted(schedule.items, "assignee"), [schedule.items]);
@@ -155,6 +160,7 @@ export default function App() {
               allItems={schedule.items}
               timelineDays={timelineDays}
               today={today}
+              holidays={holidays}
               editing={schedule.isEditing}
               assignees={schedule.assignees}
               dependencyError={schedule.dependencyError}

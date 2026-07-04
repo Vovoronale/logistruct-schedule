@@ -1,5 +1,5 @@
 import type { ScheduleItem, ScheduleStatus } from "../types";
-import { addWorkingDays, todayIso } from "./dates";
+import { addWorkingDays, todayIso, type HolidaySet } from "./dates";
 
 export interface ScheduleFilters {
   query: string;
@@ -48,9 +48,13 @@ export function moveItem(
   return normalizePositions(next);
 }
 
-export function isOverdue(item: ScheduleItem, today = todayIso()): boolean {
+export function isOverdue(
+  item: ScheduleItem,
+  today = todayIso(),
+  holidays: HolidaySet = new Set(),
+): boolean {
   if (item.status === "completed") return false;
-  const endDate = addWorkingDays(item.startDate, item.durationDays);
+  const endDate = addWorkingDays(item.startDate, item.durationDays, holidays);
   return endDate !== null && endDate < today;
 }
 
