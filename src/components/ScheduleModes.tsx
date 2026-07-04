@@ -16,6 +16,8 @@ interface ScheduleModesProps {
   onOpenComparison?: () => void;
   onSelectRevision?: (revision: number) => void;
   onClearComparison?: () => void;
+  expanded?: boolean;
+  showLauncher?: boolean;
 }
 
 function historyLabel(entry: ScheduleHistoryEntry): string {
@@ -38,6 +40,8 @@ export function ScheduleModes({
   onOpenComparison,
   onSelectRevision,
   onClearComparison,
+  expanded = false,
+  showLauncher = true,
 }: ScheduleModesProps) {
   const [historyRequested, setHistoryRequested] = useState(false);
 
@@ -56,10 +60,10 @@ export function ScheduleModes({
     );
   }
 
-  const showHistory = historyRequested || comparison !== null;
+  const showHistory = expanded || historyRequested || comparison !== null;
   return (
     <div className="schedule-modes comparison-toolbar">
-      <button
+      {showLauncher ? <button
         className="button secondary"
         type="button"
         disabled={editing}
@@ -70,7 +74,7 @@ export function ScheduleModes({
         }}
       >
         Порівняти
-      </button>
+      </button> : null}
       {showHistory ? (
         <>
           <label className="comparison-select">

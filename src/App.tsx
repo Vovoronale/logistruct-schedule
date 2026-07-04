@@ -1,14 +1,14 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { AssigneeDialog } from "./components/AssigneeDialog";
 import { AssigneeLegend } from "./components/AssigneeLegend";
 import { EditActions } from "./components/EditActions";
-import { FilterBar } from "./components/FilterBar";
 import { LoginDialog } from "./components/LoginDialog";
 import { ProgressOverview } from "./components/ProgressOverview";
 import { ScheduleGrid } from "./components/ScheduleGrid";
 import { ScheduleModes } from "./components/ScheduleModes";
 import { Toast } from "./components/Toast";
+import { WorkspaceToolbar, type WorkspacePanel } from "./components/WorkspaceToolbar";
 import { useSchedule } from "./hooks/useSchedule";
 import { useToday } from "./hooks/useToday";
 import { useHolidays } from "./hooks/useHolidays";
@@ -29,6 +29,8 @@ export default function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [openPanel, setOpenPanel] = useState<WorkspacePanel | null>(null);
+  const [comparisonRequested, setComparisonRequested] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const deferredQuery = useDeferredValue(filters.query);
   const effectiveFilters = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
@@ -93,6 +95,19 @@ export default function App() {
     void schedule.load();
   };
 
+  const togglePanel = (panel: WorkspacePanel) => {
+    setOpenPanel((current) => current === panel ? null : panel);
+  };
+
+  useEffect(() => {
+    if (openPanel === null) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenPanel(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [openPanel]);
+
   return (
     <div className="app-shell">
       <AppHeader
@@ -103,12 +118,36 @@ export default function App() {
         onRefresh={refresh}
         onLogout={() => void schedule.logout()}
       />
-      <main>
-        <FilterBar filters={filters} sections={sections} assignees={assigneeNames} onChange={setFilters} />
-        <div className="legend-row">
-          <span>{filteredItems.length} із {schedule.items.length} креслень</span>
-          <AssigneeLegend assignees={schedule.assignees} visibleAssignees={assignedNames} />
+      <main className="workspace-main">
+        <div className="workspace-controls">
+          <WorkspaceToolbar
+            filters={filters}
+            sections={sections}
+            assignees={assigneeNames}
+            visibleCount={filteredItems.length}
+            totalCount={schedule.items.length}
+            openPanel={openPanel}
+            onChange={setFilters}
+            onTogglePanel={togglePanel}
+            onCompare={() => {
+              setOpenPanel(null);
+              setAnalysisId(null);
+              setComparisonRequested(true);
+              void schedule.loadHistory();
+            }}
+          />
+          {openPanel === "progress" ? (
+            <section className="workspace-popover" id="progress-panel">
+              <ProgressOverview progress={progress} />
+            </section>
+          ) : null}
+          {openPanel === "assignees" ? (
+            <section className="workspace-popover assignees-popover" id="assignees-panel">
+              <AssigneeLegend assignees={schedule.assignees} visibleAssignees={assignedNames} />
+            </section>
+          ) : null}
         </div>
+        <div className="workspace-content">
         {schedule.isEditing ? (
           <EditActions
             dirty={schedule.isDirty}
@@ -121,10 +160,7 @@ export default function App() {
             onCancel={cancel}
           />
         ) : null}
-        {!schedule.loading && schedule.saved ? (
-          <ProgressOverview progress={progress} />
-        ) : null}
-        <ScheduleModes
+        {(selectedAnalysisId !== null || comparisonRequested || comparison !== null) ? <ScheduleModes
           analysisActive={selectedAnalysisId !== null}
           onClearAnalysis={() => setAnalysisId(null)}
           editing={schedule.isEditing}
@@ -137,12 +173,17 @@ export default function App() {
             setAnalysisId(null);
             void schedule.loadHistory();
           }}
+          expanded={comparisonRequested}
+          showLauncher={false}
           onSelectRevision={(revision) => {
             setAnalysisId(null);
             void schedule.selectHistoryRevision(revision);
           }}
-          onClearComparison={schedule.clearComparison}
-        />
+          onClearComparison={() => {
+            setComparisonRequested(false);
+            schedule.clearComparison();
+          }}
+        /> : null}
         {schedule.loading ? (
           <div className="loading-state" role="status"><span /><p>Завантажуємо графік…</p></div>
         ) : null}
@@ -180,11 +221,8 @@ export default function App() {
             />
           </section>
         ) : null}
+        </div>
       </main>
-      <footer className="app-footer">
-        <span>Публічний перегляд · Cloudflare Pages</span>
-        <span>Дата завершення рахується в робочих днях</span>
-      </footer>
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} onLogin={schedule.login} />
       <AssigneeDialog
         open={assigneeDialogOpen}

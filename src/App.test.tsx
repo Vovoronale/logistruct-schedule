@@ -73,6 +73,7 @@ describe("schedule application", () => {
   });
 
   it("renders sheet, section and whole-schedule progress", async () => {
+    const user = userEvent.setup();
     render(<App />);
 
     expect(
@@ -81,6 +82,7 @@ describe("schedule application", () => {
     expect(
       screen.getByRole("progressbar", { name: "Виконання листа 1" }),
     ).toHaveAttribute("value", "40");
+    await user.click(screen.getByRole("button", { name: "Прогрес" }));
     expect(
       screen.getByRole("heading", { name: "Загальний прогрес" }),
     ).toBeVisible();
@@ -97,10 +99,11 @@ describe("schedule application", () => {
     render(<App />);
     await screen.findByText(schedule.items[0].title);
 
-    await user.type(
-      screen.getByRole("textbox", { name: "Пошук креслення" }),
-      schedule.items[0].title,
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Статус" }),
+      "planned",
     );
+    await user.click(screen.getByRole("button", { name: "Прогрес" }));
 
     expect(
       screen.getByRole("progressbar", { name: "Прогрес розділу КЗ-0" }),
@@ -109,6 +112,31 @@ describe("schedule application", () => {
       screen.getByRole("progressbar", { name: "Прогрес розділу КМ2" }),
     ).toBeVisible();
     expect(screen.queryByText(schedule.items[1].title)).not.toBeInTheDocument();
+  });
+
+  it("shows only one information panel and closes it with Escape", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(schedule.items[0].title);
+
+    await user.click(screen.getByRole("button", { name: "Прогрес" }));
+    expect(screen.getByRole("heading", { name: "Загальний прогрес" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Виконавці" }));
+    expect(screen.queryByRole("heading", { name: "Загальний прогрес" })).not.toBeInTheDocument();
+    expect(document.querySelector("#assignees-panel")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(document.querySelector("#assignees-panel")).not.toBeInTheDocument();
+  });
+
+  it("uses a full-height workspace without a persistent footer", async () => {
+    render(<App />);
+    await screen.findByText(schedule.items[0].title);
+
+    expect(document.querySelector(".workspace-main")).toBeInTheDocument();
+    expect(document.querySelector(".workspace-content")).toBeInTheDocument();
+    expect(document.querySelector(".app-footer")).not.toBeInTheDocument();
   });
 
   it("keeps editing actions hidden from public visitors", async () => {
