@@ -3,8 +3,11 @@ import {
   addCalendarDays,
   addWorkingDays,
   createDemoFixture,
+  renderFixtureSql,
   validateFixture,
 } from "../scripts/test-data.mjs";
+import { join, resolve } from "node:path";
+import { assertSafeTestStatePath } from "../scripts/test-db.mjs";
 
 const baseItems = Array.from({ length: 68 }, (_, index) => ({
   id: `drawing-${String(index + 1).padStart(3, "0")}`,
@@ -85,5 +88,37 @@ describe("createDemoFixture", () => {
       .toThrow("EXPECTED_68_BASE_ITEMS");
     expect(() => createDemoFixture(baseItems, assignees.slice(0, 16), "2026-07-04"))
       .toThrow("EXPECTED_17_ASSIGNEES");
+  });
+});
+
+describe("renderFixtureSql", () => {
+  it("renders an idempotent transaction with escaped values", () => {
+    const fixture = createDemoFixture(baseItems, assignees, "2026-07-04");
+    fixture.items[0].title = "Креслення з 'апострофом'";
+
+    const sql = renderFixtureSql(fixture);
+
+    expect(sql).toContain("BEGIN IMMEDIATE;");
+    expect(sql).toContain("DELETE FROM item_dependencies;");
+    expect(sql).toContain("DELETE FROM schedule_history;");
+    expect(sql).toContain("UPDATE schedule_items SET position = position + 1000;");
+    expect(sql).toContain("Креслення з ''апострофом''");
+    expect((sql.match(/UPDATE schedule_items\nSET/g) ?? [])).toHaveLength(68);
+    expect((sql.match(/INSERT INTO item_dependencies/g) ?? [])).toHaveLength(14);
+    expect((sql.match(/INSERT INTO schedule_history/g) ?? [])).toHaveLength(3);
+    expect(sql.trim().endsWith("COMMIT;")).toBe(true);
+  });
+});
+
+describe("assertSafeTestStatePath", () => {
+  it("only accepts the repository test-state directory", () => {
+    const root = resolve("fixture-root");
+    const expected = join(root, ".wrangler", "test-state");
+
+    expect(() => assertSafeTestStatePath(root, expected)).not.toThrow();
+    expect(() => assertSafeTestStatePath(root, join(root, ".wrangler", "state")))
+      .toThrow("UNSAFE_TEST_STATE_PATH");
+    expect(() => assertSafeTestStatePath(root, resolve("outside")))
+      .toThrow("UNSAFE_TEST_STATE_PATH");
   });
 });

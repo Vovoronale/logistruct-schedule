@@ -242,3 +242,75 @@ export function validateFixture(fixture) {
     }
   }
 }
+
+function sqlString(value) {
+  if (value === null || value === undefined) return "NULL";
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function sqlInteger(value) {
+  if (value === null || value === undefined) return "NULL";
+  if (!Number.isInteger(value)) throw new Error(`INVALID_SQL_INTEGER:${value}`);
+  return String(value);
+}
+
+function snapshotJson(snapshot) {
+  return JSON.stringify({
+    revision: snapshot.revision,
+    updatedAt: snapshot.updatedAt,
+    items: snapshot.items,
+    assignees: snapshot.assignees,
+  });
+}
+
+export function renderFixtureSql(fixture) {
+  validateFixture(fixture);
+  const lines = [
+    "PRAGMA foreign_keys = ON;",
+    "BEGIN IMMEDIATE;",
+    "DELETE FROM item_dependencies;",
+    "DELETE FROM schedule_history;",
+    "UPDATE schedule_items SET position = position + 1000;",
+  ];
+
+  for (const item of fixture.items) {
+    lines.push(
+      `UPDATE schedule_items
+SET position = ${sqlInteger(item.position)},
+    section = ${sqlString(item.section)},
+    sheet_number = ${sqlInteger(item.sheetNumber)},
+    title = ${sqlString(item.title)},
+    start_mode = ${sqlString(item.startMode)},
+    start_date = ${sqlString(item.startDate)},
+    duration_days = ${sqlInteger(item.durationDays)},
+    assignee = ${sqlString(item.assignee)},
+    status = ${sqlString(item.status)},
+    created_at = ${sqlString(item.createdAt)},
+    updated_at = ${sqlString(item.updatedAt)}
+WHERE id = ${sqlString(item.id)};`,
+    );
+  }
+
+  for (const edge of fixture.dependencies) {
+    lines.push(
+      `INSERT INTO item_dependencies (item_id, predecessor_id)
+VALUES (${sqlString(edge.itemId)}, ${sqlString(edge.predecessorId)});`,
+    );
+  }
+
+  for (const snapshot of fixture.history) {
+    lines.push(
+      `INSERT INTO schedule_history (revision, saved_at, snapshot_json)
+VALUES (${sqlInteger(snapshot.revision)}, ${sqlString(snapshot.savedAt)}, ${sqlString(snapshotJson(snapshot))});`,
+    );
+  }
+
+  lines.push(
+    `UPDATE schedule_meta
+SET revision = ${sqlInteger(fixture.revision)},
+    updated_at = ${sqlString(fixture.updatedAt)}
+WHERE id = 1;`,
+    "COMMIT;",
+  );
+  return `${lines.join("\n")}\n`;
+}
