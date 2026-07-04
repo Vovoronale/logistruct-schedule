@@ -23,6 +23,7 @@ describe("ScheduleGrid calendar columns", () => {
       <ScheduleGrid
         items={[item]}
         timelineDays={["2026-07-03", "2026-07-04", "2026-07-05"]}
+        today="2026-07-04"
         editing={false}
         assignees={[]}
         onUpdate={vi.fn()}

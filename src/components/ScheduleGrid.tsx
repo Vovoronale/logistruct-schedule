@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { CSSProperties } from "react";
 import type { Assignee, ScheduleItem, ScheduleStatus } from "../types";
 import { addWorkingDays, formatDate } from "../lib/dates";
+import { calculateItemProgress } from "../lib/progress";
 import { isOverdue, STATUS_LABELS } from "../lib/schedule";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, TrashIcon } from "./Icons";
 import { GanttCells, GanttDayHeaders, GanttMonthHeaders } from "./GanttTimeline";
@@ -11,6 +12,7 @@ import { GanttCells, GanttDayHeaders, GanttMonthHeaders } from "./GanttTimeline"
 interface ScheduleGridProps {
   items: ScheduleItem[];
   timelineDays: string[];
+  today: string;
   editing: boolean;
   assignees: Assignee[];
   onUpdate: (id: string, patch: Partial<ScheduleItem>) => void;
@@ -25,11 +27,20 @@ interface RowProps extends Omit<ScheduleGridProps, "items" | "onReorder"> {
   rowCount: number;
 }
 
-function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, editing, assignees, onUpdate, onDelete, onMoveBy }: RowProps) {
+const progressFormatter = new Intl.NumberFormat("uk-UA", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+const formatProgress = (value: number) =>
+  `${progressFormatter.format(value)}%`;
+
+function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, today, editing, assignees, onUpdate, onDelete, onMoveBy }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !editing });
   const style = { transform: CSS.Transform.toString(transform), transition } as CSSProperties;
   const endDate = addWorkingDays(item.startDate, item.durationDays);
   const overdue = isOverdue(item);
+  const progress = calculateItemProgress(item, today);
 
   return (
     <tr ref={setNodeRef} style={style} className={`${item.status === "completed" ? "completed-row" : ""} ${overdue ? "overdue-row" : ""} ${isDragging ? "dragging" : ""}`}>
@@ -68,6 +79,23 @@ function SortableScheduleRow({ item, rowIndex, rowCount, timelineDays, editing, 
           </div>
         ) : <span className={`status-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span>}
       </td>
+      <td className="sheet-progress-cell">
+        {progress === null ? (
+          <span className="progress-unavailable">—</span>
+        ) : (
+          <div
+            className="sheet-progress"
+            title={`Виконання: ${formatProgress(progress)}`}
+          >
+            <progress
+              aria-label={`Виконання листа ${item.position}`}
+              max={100}
+              value={progress}
+            />
+            <span>{formatProgress(progress)}</span>
+          </div>
+        )}
+      </td>
       {timelineDays.length > 0 ? <GanttCells item={item} days={timelineDays} assignees={assignees} /> : (
         <td className="empty-timeline-cell">{rowIndex === 0 ? <span>Дати ще не заплановані</span> : null}</td>
       )}
@@ -105,6 +133,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
               <th rowSpan={2}>Завершення</th>
               <th rowSpan={2}>Виконавець</th>
               <th rowSpan={2}>Статус</th>
+              <th rowSpan={2}>Виконання</th>
               {props.timelineDays.length > 0 ? <GanttMonthHeaders days={props.timelineDays} /> : <th rowSpan={2} className="empty-timeline-header">Календар робіт</th>}
             </tr>
             {props.timelineDays.length > 0 ? <tr><GanttDayHeaders days={props.timelineDays} /></tr> : null}

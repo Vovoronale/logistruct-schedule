@@ -5,10 +5,13 @@ import { AssigneeLegend } from "./components/AssigneeLegend";
 import { EditActions } from "./components/EditActions";
 import { FilterBar } from "./components/FilterBar";
 import { LoginDialog } from "./components/LoginDialog";
+import { ProgressOverview } from "./components/ProgressOverview";
 import { ScheduleGrid } from "./components/ScheduleGrid";
 import { Toast } from "./components/Toast";
 import { useSchedule } from "./hooks/useSchedule";
+import { useToday } from "./hooks/useToday";
 import { buildTimelineDays } from "./lib/dates";
+import { calculateScheduleProgress } from "./lib/progress";
 import { filterItems, type ScheduleFilters, uniqueSorted } from "./lib/schedule";
 import "./styles.css";
 
@@ -16,6 +19,7 @@ const EMPTY_FILTERS: ScheduleFilters = { query: "", section: "", assignee: "", s
 
 export default function App() {
   const schedule = useSchedule();
+  const today = useToday();
   const [filters, setFilters] = useState<ScheduleFilters>(EMPTY_FILTERS);
   const [loginOpen, setLoginOpen] = useState(false);
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
@@ -24,6 +28,10 @@ export default function App() {
   const effectiveFilters = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
   const filteredItems = useMemo(() => filterItems(schedule.items, effectiveFilters), [schedule.items, effectiveFilters]);
   const timelineDays = useMemo(() => buildTimelineDays(schedule.items), [schedule.items]);
+  const progress = useMemo(
+    () => calculateScheduleProgress(schedule.items, today),
+    [schedule.items, today],
+  );
   const sections = useMemo(() => uniqueSorted(schedule.items, "section"), [schedule.items]);
   const assignedNames = useMemo(() => uniqueSorted(schedule.items, "assignee"), [schedule.items]);
   const assigneeNames = useMemo(() => {
@@ -81,6 +89,9 @@ export default function App() {
             onCancel={cancel}
           />
         ) : null}
+        {!schedule.loading && schedule.saved ? (
+          <ProgressOverview progress={progress} />
+        ) : null}
         {schedule.loading ? (
           <div className="loading-state" role="status"><span /><p>Завантажуємо графік…</p></div>
         ) : null}
@@ -96,6 +107,7 @@ export default function App() {
             <ScheduleGrid
               items={filteredItems}
               timelineDays={timelineDays}
+              today={today}
               editing={schedule.isEditing}
               assignees={schedule.assignees}
               onUpdate={schedule.updateItem}
