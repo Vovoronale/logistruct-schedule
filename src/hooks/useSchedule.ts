@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Assignee,
   ScheduleHistoryEntry,
@@ -29,6 +29,7 @@ function cloneItems(items: ScheduleItem[]): ScheduleItem[] {
 export function useSchedule(client: ScheduleClient = scheduleClient) {
   const [saved, setSaved] = useState<SchedulePayload | null>(null);
   const [draftItems, setDraftItems] = useState<ScheduleItem[]>([]);
+  const draftItemsRef = useRef<ScheduleItem[]>([]);
   const [draftAssignees, setDraftAssignees] = useState<Assignee[]>([]);
   const [authenticated, setAuthenticated] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,6 +47,11 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
   const [comparisonSnapshot, setComparisonSnapshot] =
     useState<ScheduleHistorySnapshot | null>(null);
 
+  const replaceDraftItems = useCallback((next: ScheduleItem[]) => {
+    draftItemsRef.current = next;
+    setDraftItems(next);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -55,7 +61,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
         client.getSession().catch(() => false),
       ]);
       setSaved(schedule);
-      setDraftItems(cloneItems(schedule.items));
+      replaceDraftItems(cloneItems(schedule.items));
       setDraftAssignees(schedule.assignees);
       setAuthenticated(session);
       setIsDirty(false);
@@ -68,7 +74,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     } finally {
       setLoading(false);
     }
-  }, [client]);
+  }, [client, replaceDraftItems]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void load(), 0);
@@ -93,28 +99,28 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
 
   const beginEditing = useCallback(() => {
     if (!authenticated || !saved) return false;
-    setDraftItems(cloneItems(saved.items));
+    replaceDraftItems(cloneItems(saved.items));
     setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
     setIsEditing(true);
     setIsDirty(false);
     setDependencyError(null);
     setComparisonSnapshot(null);
     return true;
-  }, [authenticated, saved]);
+  }, [authenticated, replaceDraftItems, saved]);
 
   const login = useCallback(
     async (password: string) => {
       await client.login(password);
       setAuthenticated(true);
       if (saved) {
-        setDraftItems(cloneItems(saved.items));
+        replaceDraftItems(cloneItems(saved.items));
         setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
         setIsEditing(true);
         setDependencyError(null);
         setComparisonSnapshot(null);
       }
     },
-    [client, saved],
+    [client, replaceDraftItems, saved],
   );
 
   const logout = useCallback(async () => {
@@ -126,13 +132,18 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     setComparisonSnapshot(null);
   }, [client]);
 
-  const applyDraft = useCallback((next: ScheduleItem[]) => {
+  const applyDraft = useCallback((
+    update: ScheduleItem[] | ((current: ScheduleItem[]) => ScheduleItem[]),
+  ) => {
+    const next = typeof update === "function"
+      ? update(draftItemsRef.current)
+      : update;
     try {
-      setDraftItems(recalculateSchedule(next));
+      replaceDraftItems(recalculateSchedule(next));
       setDependencyError(null);
       setError(null);
     } catch (draftError) {
-      setDraftItems(cloneItems(next));
+      replaceDraftItems(cloneItems(next));
       const nextError = draftError instanceof DependencyError
         ? { itemId: draftError.itemId, message: draftError.message }
         : { itemId: "", message: "Не вдалося перерахувати залежності" };
@@ -140,27 +151,27 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       setError(nextError.message);
     }
     setIsDirty(true);
-  }, []);
+  }, [replaceDraftItems]);
 
   const updateItem = useCallback(
     (id: string, patch: Partial<ScheduleItem>) => {
-      applyDraft(
-        draftItems.map((item) =>
+      applyDraft((current) =>
+        current.map((item) =>
           item.id === id ? { ...item, ...patch } : item,
         ),
       );
     },
-    [applyDraft, draftItems],
+    [applyDraft],
   );
 
   const addItem = useCallback(() => {
     const now = new Date().toISOString();
-    applyDraft([
-      ...draftItems,
+    applyDraft((current) => [
+      ...current,
       {
         id: crypto.randomUUID(),
-        position: draftItems.length + 1,
-        section: draftItems.at(-1)?.section ?? "КЗ-0",
+        position: current.length + 1,
+        section: current.at(-1)?.section ?? "КЗ-0",
         sheetNumber: 1,
         title: "Нове креслення",
         startMode: "manual",
@@ -173,13 +184,14 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
         updatedAt: now,
       },
     ]);
-  }, [applyDraft, draftItems]);
+  }, [applyDraft]);
 
   const removeItem = useCallback((id: string): boolean => {
-    const blockerIds = directDependentIds(draftItems, id);
+    const current = draftItemsRef.current;
+    const blockerIds = directDependentIds(current, id);
     if (blockerIds.length > 0) {
       const positions = blockerIds
-        .map((blockerId) => draftItems.find((item) => item.id === blockerId)?.position)
+        .map((blockerId) => current.find((item) => item.id === blockerId)?.position)
         .filter((position): position is number => position !== undefined)
         .map((position) => `№${position}`)
         .join(", ");
@@ -188,36 +200,37 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
       setError(message);
       return false;
     }
-    applyDraft(normalizePositions(draftItems.filter((item) => item.id !== id)));
+    applyDraft((items) => normalizePositions(items.filter((item) => item.id !== id)));
     return true;
-  }, [applyDraft, draftItems]);
+  }, [applyDraft]);
 
   const reorderItem = useCallback((activeId: string, overId: string) => {
-    applyDraft(moveItem(draftItems, activeId, overId));
-  }, [applyDraft, draftItems]);
+    applyDraft((current) => moveItem(current, activeId, overId));
+  }, [applyDraft]);
 
   const moveBy = useCallback((id: string, delta: -1 | 1) => {
-    const index = draftItems.findIndex((item) => item.id === id);
+    const current = draftItemsRef.current;
+    const index = current.findIndex((item) => item.id === id);
     const nextIndex = index + delta;
-    if (index < 0 || nextIndex < 0 || nextIndex >= draftItems.length) return;
-    applyDraft(moveItem(draftItems, id, draftItems[nextIndex].id));
-  }, [applyDraft, draftItems]);
+    if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return;
+    applyDraft((items) => moveItem(items, id, items[nextIndex].id));
+  }, [applyDraft]);
 
   const replaceAssignees = useCallback((next: Assignee[]) => {
-    const result = applyAssigneeChanges(draftItems, draftAssignees, next);
+    const result = applyAssigneeChanges(draftItemsRef.current, draftAssignees, next);
     applyDraft(result.items);
     setDraftAssignees(result.assignees);
-  }, [applyDraft, draftAssignees, draftItems]);
+  }, [applyDraft, draftAssignees]);
 
   const cancel = useCallback(() => {
     if (!saved) return;
-    setDraftItems(cloneItems(saved.items));
+    replaceDraftItems(cloneItems(saved.items));
     setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
     setIsEditing(false);
     setIsDirty(false);
     setDependencyError(null);
     setError(null);
-  }, [saved]);
+  }, [replaceDraftItems, saved]);
 
   const save = useCallback(async () => {
     if (!saved) return;
@@ -230,11 +243,11 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     try {
       const next = await client.save({
         revision: saved.revision,
-        items: normalizePositions(draftItems),
+        items: normalizePositions(draftItemsRef.current),
         assignees: draftAssignees,
       });
       setSaved(next);
-      setDraftItems(next.items);
+      replaceDraftItems(cloneItems(next.items));
       setDraftAssignees(next.assignees);
       setIsDirty(false);
       setIsEditing(false);
@@ -247,7 +260,7 @@ export function useSchedule(client: ScheduleClient = scheduleClient) {
     } finally {
       setSaving(false);
     }
-  }, [client, dependencyError, draftAssignees, draftItems, saved]);
+  }, [client, dependencyError, draftAssignees, replaceDraftItems, saved]);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);

@@ -100,6 +100,20 @@ describe("useSchedule assignee editing", () => {
 });
 
 describe("useSchedule dependency editing", () => {
+  it("preserves rapid sequential patches to the same draft", async () => {
+    const { result } = await editingHook(client());
+
+    act(() => {
+      result.current.updateItem("drawing-001", { startDate: "2026-07-07" });
+      result.current.updateItem("drawing-001", { durationDays: 3 });
+    });
+
+    expect(result.current.items[0]).toMatchObject({
+      startDate: "2026-07-07",
+      durationDays: 3,
+    });
+  });
+
   it("cascades an upstream duration change", async () => {
     const { result } = await editingHook(client(dependencyPayload));
 
