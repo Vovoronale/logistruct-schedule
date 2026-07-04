@@ -5,6 +5,7 @@ playwright-report/
 test-results/
 .wrangler/
 .playwright-cli/
+.worktrees/
 .dev.vars
 .env
 .env.*
