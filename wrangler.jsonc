@@ -15,6 +15,7 @@
     {
       "binding": "DB",
       "database_name": "logistruct-schedule-db",
+      "database_id": "93775a19-43a8-4d67-b48d-3b39e157c2ec",
       "migrations_dir": "./migrations"
     }
   ]
