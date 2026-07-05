@@ -4,13 +4,6 @@
   "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-07-03",
   "compatibility_flags": ["nodejs_compat"],
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1
-  },
-  "secrets": {
-    "required": ["ADMIN_PASSWORD", "SESSION_SECRET"]
-  },
   "d1_databases": [
     {
       "binding": "DB",
