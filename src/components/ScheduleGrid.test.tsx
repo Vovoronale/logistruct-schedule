@@ -42,6 +42,43 @@ describe("ScheduleGrid calendar columns", () => {
     expect(container.querySelectorAll("col.timeline-day-column")).toHaveLength(3);
   });
 
+  it("keeps all schedule metadata columns sticky before the gantt timeline", () => {
+    const { container } = render(
+      <ScheduleGrid
+        items={[item]}
+        timelineDays={["2026-07-03"]}
+        today="2026-07-03"
+        editing={false}
+        assignees={[]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    const headerLabels = [
+      "Початок за",
+      "Початок",
+      "Робочі дні",
+      "Завершення",
+      "Виконавець",
+      "Статус",
+      "Виконання",
+    ];
+
+    for (const label of headerLabels) {
+      expect(screen.getByRole("columnheader", { name: label })).toHaveClass("sticky-col");
+    }
+
+    const rowCells = container.querySelectorAll<HTMLTableCellElement>(
+      '[data-testid="schedule-row-drawing-001"] > td',
+    );
+    for (const cell of Array.from(rowCells).slice(4, 11)) {
+      expect(cell).toHaveClass("sticky-col");
+    }
+  });
+
   it("centers the today column on initial render", () => {
     vi.spyOn(HTMLElement.prototype, "offsetLeft", "get")
       .mockImplementation(function offsetLeft(this: HTMLElement) {

@@ -79,6 +79,17 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
   ) => changedFields.has(field)
     ? { className: "changed-cell", title: `Було: ${previousValue}` }
     : {};
+  const stickyCellProps = (
+    className: string,
+    field: ComparableItemField,
+    previousValue: string,
+  ) => {
+    const props = cellProps(field, previousValue);
+    return {
+      ...props,
+      className: ["sticky-col", className, props.className].filter(Boolean).join(" "),
+    };
+  };
   const previousPredecessors = previousItem?.predecessorIds
     .map((id) => itemById.get(id)?.position)
     .filter((position): position is number => position !== undefined)
@@ -108,7 +119,7 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           {editing ? <button type="button" className="delete-row" onClick={() => onDelete(item.id)} aria-label={`Видалити рядок ${item.position}`}><TrashIcon /></button> : null}
         </div>
       </td>
-      <td className={`dependency-cell ${changedFields.has("startMode") || changedFields.has("predecessorIds") ? "changed-cell" : ""}`} title={changedFields.has("startMode") || changedFields.has("predecessorIds") ? `Було: ${previousItem?.startMode === "manual" ? "Датою" : previousPredecessors}` : undefined}>
+      <td className={`sticky-col col-start-mode dependency-cell ${changedFields.has("startMode") || changedFields.has("predecessorIds") ? "changed-cell" : ""}`} title={changedFields.has("startMode") || changedFields.has("predecessorIds") ? `Було: ${previousItem?.startMode === "manual" ? "Датою" : previousPredecessors}` : undefined}>
         {editing ? (
           <DependencyEditor
             item={item}
@@ -127,11 +138,11 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           </span>
         )}
       </td>
-      <td {...cellProps("startDate", formatDate(previousItem?.startDate ?? null))}>{editing ? <input className="cell-input date" type="date" readOnly={item.startMode === "dependencies"} value={item.startDate ?? ""} onChange={(e) => onUpdate(item.id, { startDate: e.target.value || null })} aria-label={`Дата початку рядка ${item.position}`} /> : formatDate(item.startDate)}</td>
-      <td className={`duration-cell ${changedFields.has("durationDays") ? "changed-cell" : ""}`} title={changedFields.has("durationDays") ? `Було: ${previousItem?.durationDays ?? "—"}` : undefined}>{editing ? <input className="cell-input numeric" type="number" min="1" value={item.durationDays ?? ""} onChange={(e) => onUpdate(item.id, { durationDays: e.target.value ? Number(e.target.value) : null })} aria-label={`Робочі дні рядка ${item.position}`} /> : (item.durationDays ?? "—")}</td>
-      <td className={scheduleChanged ? "changed-cell" : undefined} title={scheduleChanged ? `Було: ${formatDate(addWorkingDays(previousItem?.startDate ?? null, previousItem?.durationDays ?? null, holidays))}` : undefined}>{formatDate(endDate)}</td>
-      <td {...cellProps("assignee", previousItem?.assignee ?? "—")}>{editing ? <input className="cell-input compact" list="assignee-options" value={item.assignee ?? ""} onChange={(e) => onUpdate(item.id, { assignee: e.target.value || null })} aria-label={`Виконавець рядка ${item.position}`} /> : <span className="assignee-code">{item.assignee ?? "—"}</span>}</td>
-      <td {...cellProps("status", previousItem?.status ?? "—")}>
+      <td {...stickyCellProps("col-start-date", "startDate", formatDate(previousItem?.startDate ?? null))}>{editing ? <input className="cell-input date" type="date" readOnly={item.startMode === "dependencies"} value={item.startDate ?? ""} onChange={(e) => onUpdate(item.id, { startDate: e.target.value || null })} aria-label={`Дата початку рядка ${item.position}`} /> : formatDate(item.startDate)}</td>
+      <td className={`sticky-col col-duration duration-cell ${changedFields.has("durationDays") ? "changed-cell" : ""}`} title={changedFields.has("durationDays") ? `Було: ${previousItem?.durationDays ?? "—"}` : undefined}>{editing ? <input className="cell-input numeric" type="number" min="1" value={item.durationDays ?? ""} onChange={(e) => onUpdate(item.id, { durationDays: e.target.value ? Number(e.target.value) : null })} aria-label={`Робочі дні рядка ${item.position}`} /> : (item.durationDays ?? "—")}</td>
+      <td className={`sticky-col col-end-date ${scheduleChanged ? "changed-cell" : ""}`} title={scheduleChanged ? `Було: ${formatDate(addWorkingDays(previousItem?.startDate ?? null, previousItem?.durationDays ?? null, holidays))}` : undefined}>{formatDate(endDate)}</td>
+      <td {...stickyCellProps("col-assignee", "assignee", previousItem?.assignee ?? "—")}>{editing ? <input className="cell-input compact" list="assignee-options" value={item.assignee ?? ""} onChange={(e) => onUpdate(item.id, { assignee: e.target.value || null })} aria-label={`Виконавець рядка ${item.position}`} /> : <span className="assignee-code">{item.assignee ?? "—"}</span>}</td>
+      <td {...stickyCellProps("col-status", "status", previousItem?.status ?? "—")}>
         {editing ? (
           <div className="status-edit-wrap">
             <select className="cell-input status-select" value={item.status} onChange={(e) => onUpdate(item.id, { status: e.target.value as ScheduleStatus })} aria-label={`Статус рядка ${item.position}`}>
@@ -144,7 +155,7 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           </div>
         ) : <span className={`status-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span>}
       </td>
-      <td className="sheet-progress-cell">
+      <td className="sticky-col col-progress sheet-progress-cell">
         {progress === null ? (
           <span className="progress-unavailable">—</span>
         ) : (
@@ -190,13 +201,13 @@ function RemovedScheduleRow({
       <td className="sticky-col col-section">{item.section}</td>
       <td className="sticky-col col-sheet">{item.sheetNumber}</td>
       <td className="sticky-col col-title">{item.title}</td>
-      <td>{item.startMode === "manual" ? "Датою" : item.predecessorIds.map((id) => `№${positions.get(id) ?? "?"}`).join(", ")}</td>
-      <td>{formatDate(item.startDate)}</td>
-      <td>{item.durationDays ?? "—"}</td>
-      <td>{formatDate(addWorkingDays(item.startDate, item.durationDays, holidays))}</td>
-      <td>{item.assignee ?? "—"}</td>
-      <td><span className="status-badge removed">Видалено</span></td>
-      <td className="sheet-progress-cell"><span className="progress-unavailable">—</span></td>
+      <td className="sticky-col col-start-mode">{item.startMode === "manual" ? "Датою" : item.predecessorIds.map((id) => `№${positions.get(id) ?? "?"}`).join(", ")}</td>
+      <td className="sticky-col col-start-date">{formatDate(item.startDate)}</td>
+      <td className="sticky-col col-duration">{item.durationDays ?? "—"}</td>
+      <td className="sticky-col col-end-date">{formatDate(addWorkingDays(item.startDate, item.durationDays, holidays))}</td>
+      <td className="sticky-col col-assignee">{item.assignee ?? "—"}</td>
+      <td className="sticky-col col-status"><span className="status-badge removed">Видалено</span></td>
+      <td className="sticky-col col-progress sheet-progress-cell"><span className="progress-unavailable">—</span></td>
       {timelineDays.length > 0
         ? <GanttCells item={item} days={timelineDays} assignees={assignees} today={today} holidays={holidays} />
         : <td className="empty-timeline-cell" />}
@@ -258,13 +269,13 @@ export function ScheduleGrid(props: ScheduleGridProps) {
               <th rowSpan={2} className="sticky-col col-section">Розділ</th>
               <th rowSpan={2} className="sticky-col col-sheet">№ листа</th>
               <th rowSpan={2} className="sticky-col col-title">Найменування креслення</th>
-              <th rowSpan={2}>Початок за</th>
-              <th rowSpan={2}>Початок</th>
-              <th rowSpan={2}>Робочі дні</th>
-              <th rowSpan={2}>Завершення</th>
-              <th rowSpan={2}>Виконавець</th>
-              <th rowSpan={2}>Статус</th>
-              <th rowSpan={2}>Виконання</th>
+              <th rowSpan={2} className="sticky-col col-start-mode">Початок за</th>
+              <th rowSpan={2} className="sticky-col col-start-date">Початок</th>
+              <th rowSpan={2} className="sticky-col col-duration">Робочі дні</th>
+              <th rowSpan={2} className="sticky-col col-end-date">Завершення</th>
+              <th rowSpan={2} className="sticky-col col-assignee">Виконавець</th>
+              <th rowSpan={2} className="sticky-col col-status">Статус</th>
+              <th rowSpan={2} className="sticky-col col-progress">Виконання</th>
               {props.timelineDays.length > 0 ? <GanttMonthHeaders days={props.timelineDays} /> : <th rowSpan={2} className="empty-timeline-header">Календар робіт</th>}
             </tr>
             {props.timelineDays.length > 0 ? <tr><GanttDayHeaders days={props.timelineDays} today={props.today} holidays={props.holidays} /></tr> : null}

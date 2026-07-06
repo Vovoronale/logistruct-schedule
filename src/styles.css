@@ -121,7 +121,14 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .schedule-table .col-number { left: 0; }
 .schedule-table .col-section { left: var(--c1); }
 .schedule-table .col-sheet { left: calc(var(--c1) + var(--c2)); }
-.schedule-table .col-title { left: calc(var(--c1) + var(--c2) + var(--c3)); box-shadow: 5px 0 8px -8px rgba(22,48,86,.65); }
+.schedule-table .col-title { left: calc(var(--c1) + var(--c2) + var(--c3)); }
+.schedule-table .col-start-mode { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4)); }
+.schedule-table .col-start-date { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5)); }
+.schedule-table .col-duration { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6)); }
+.schedule-table .col-end-date { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7)); }
+.schedule-table .col-assignee { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7) + var(--c8)); }
+.schedule-table .col-status { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7) + var(--c8) + var(--c9)); }
+.schedule-table .col-progress { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7) + var(--c8) + var(--c9) + var(--c10)); box-shadow: 5px 0 8px -8px rgba(22,48,86,.65); }
 .schedule-table tbody tr:nth-child(even) .sticky-col { background: var(--even); }
 .schedule-table tbody tr:hover .sticky-col { background: #f3f7fc; }
 .section-badge, .status-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-weight: 750; white-space: nowrap; }
