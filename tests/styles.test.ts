@@ -28,15 +28,13 @@ describe("schedule row styles", () => {
     expect(css).toMatch(/\.cell-input\.date \{ min-width: 0; padding-inline: 4px; \}/);
   });
 
-  it("pins every schedule metadata column ahead of the timeline", () => {
+  it("styles schedule metadata pin controls without forcing columns pinned by default", () => {
     const css = readFileSync("src/styles.css", "utf8");
 
-    expect(css).toMatch(/\.schedule-table \.col-start-mode \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\)\); \}/);
-    expect(css).toMatch(/\.schedule-table \.col-start-date \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\) \+ var\(--c5\)\); \}/);
-    expect(css).toMatch(/\.schedule-table \.col-duration \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\) \+ var\(--c5\) \+ var\(--c6\)\); \}/);
-    expect(css).toMatch(/\.schedule-table \.col-end-date \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\) \+ var\(--c5\) \+ var\(--c6\) \+ var\(--c7\)\); \}/);
-    expect(css).toMatch(/\.schedule-table \.col-assignee \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\) \+ var\(--c5\) \+ var\(--c6\) \+ var\(--c7\) \+ var\(--c8\)\); \}/);
-    expect(css).toMatch(/\.schedule-table \.col-status \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\) \+ var\(--c5\) \+ var\(--c6\) \+ var\(--c7\) \+ var\(--c8\) \+ var\(--c9\)\); \}/);
-    expect(css).toMatch(/\.schedule-table \.col-progress \{ left: calc\(var\(--c1\) \+ var\(--c2\) \+ var\(--c3\) \+ var\(--c4\) \+ var\(--c5\) \+ var\(--c6\) \+ var\(--c7\) \+ var\(--c8\) \+ var\(--c9\) \+ var\(--c10\)\);/);
+    expect(css).toMatch(/\.schedule-table \.sticky-col\.col-progress \{ box-shadow: 5px 0 8px -8px rgba\(22,48,86,\.65\); \}/);
+    expect(css).toMatch(/\.pinnable-header \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/s);
+    expect(css).toMatch(/\.pinnable-header input \{[^}]*accent-color: var\(--blue\);/s);
+    expect(css).not.toMatch(/\.schedule-table \.col-start-date \{ left:/);
+    expect(css).not.toMatch(/\.schedule-table \.col-progress \{ left:/);
   });
 });

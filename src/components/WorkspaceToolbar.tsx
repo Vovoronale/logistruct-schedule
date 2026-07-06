@@ -11,10 +11,20 @@ interface WorkspaceToolbarProps {
   assignees: string[];
   visibleCount: number;
   totalCount: number;
+  progressPercentage?: number | null;
   openPanel: WorkspacePanel | null;
   onChange: (filters: ScheduleFilters) => void;
   onTogglePanel: (panel: WorkspacePanel) => void;
   onCompare: () => void;
+}
+
+const percentFormatter = new Intl.NumberFormat("uk-UA", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+function formatPercent(value: number): string {
+  return `${percentFormatter.format(value)}%`;
 }
 
 export function WorkspaceToolbar({
@@ -23,6 +33,7 @@ export function WorkspaceToolbar({
   assignees,
   visibleCount,
   totalCount,
+  progressPercentage = null,
   openPanel,
   onChange,
   onTogglePanel,
@@ -30,6 +41,11 @@ export function WorkspaceToolbar({
 }: WorkspaceToolbarProps) {
   const set = <K extends keyof ScheduleFilters>(key: K, value: ScheduleFilters[K]) =>
     onChange({ ...filters, [key]: value });
+  const progressValue =
+    progressPercentage === null
+      ? null
+      : Math.min(100, Math.max(0, progressPercentage));
+  const progressLabel = progressValue === null ? null : formatPercent(progressValue);
 
   return (
     <div className="workspace-toolbar" aria-label="Керування графіком">
@@ -71,13 +87,24 @@ export function WorkspaceToolbar({
       <span className="workspace-count">{visibleCount} із {totalCount} креслень</span>
       <div className="workspace-actions">
         <button
-          className="button secondary compact-action"
+          className="button secondary compact-action progress-action"
           type="button"
           aria-expanded={openPanel === "progress"}
           aria-controls="progress-panel"
           onClick={() => onTogglePanel("progress")}
         >
-          Прогрес
+          <span>Прогрес</span>
+          {progressLabel ? (
+            <>
+              <span className="toolbar-progress-meter" aria-hidden="true">
+                <span
+                  className="toolbar-progress-fill"
+                  style={{ width: `${progressValue}%` }}
+                />
+              </span>
+              <span className="toolbar-progress-value">{progressLabel}</span>
+            </>
+          ) : null}
         </button>
         <button
           className="button secondary compact-action"

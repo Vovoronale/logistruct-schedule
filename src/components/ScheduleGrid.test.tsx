@@ -42,7 +42,8 @@ describe("ScheduleGrid calendar columns", () => {
     expect(container.querySelectorAll("col.timeline-day-column")).toHaveLength(3);
   });
 
-  it("keeps all schedule metadata columns sticky before the gantt timeline", () => {
+  it("starts schedule metadata columns unpinned and toggles pinning from header checkboxes", async () => {
+    const user = userEvent.setup();
     const { container } = render(
       <ScheduleGrid
         items={[item]}
@@ -57,26 +58,36 @@ describe("ScheduleGrid calendar columns", () => {
       />,
     );
 
-    const headerLabels = [
-      "Початок за",
-      "Початок",
-      "Робочі дні",
-      "Завершення",
-      "Виконавець",
-      "Статус",
-      "Виконання",
-    ];
+    const pinStartDate = screen.getByRole("checkbox", {
+      name: "Закріпити колонку Початок",
+    });
+    const pinStatus = screen.getByRole("checkbox", {
+      name: "Закріпити колонку Статус",
+    });
+    expect(pinStartDate).not.toBeChecked();
+    expect(pinStatus).not.toBeChecked();
 
-    for (const label of headerLabels) {
-      expect(screen.getByRole("columnheader", { name: label })).toHaveClass("sticky-col");
-    }
-
-    const rowCells = container.querySelectorAll<HTMLTableCellElement>(
+    const rowCells = () => container.querySelectorAll<HTMLTableCellElement>(
       '[data-testid="schedule-row-drawing-001"] > td',
     );
-    for (const cell of Array.from(rowCells).slice(4, 11)) {
-      expect(cell).toHaveClass("sticky-col");
+    for (const cell of Array.from(rowCells()).slice(4, 11)) {
+      expect(cell).not.toHaveClass("sticky-col");
     }
+
+    await user.click(pinStartDate);
+
+    expect(pinStartDate).toBeChecked();
+    expect(pinStartDate.closest("th")).toHaveClass("sticky-col");
+    expect(rowCells()[5]).toHaveClass("sticky-col");
+    expect(rowCells()[5]).toHaveStyle({
+      left: "calc(var(--c1) + var(--c2) + var(--c3) + var(--c4))",
+    });
+    expect(rowCells()[9]).not.toHaveClass("sticky-col");
+
+    await user.click(pinStartDate);
+
+    expect(pinStartDate).not.toBeChecked();
+    expect(rowCells()[5]).not.toHaveClass("sticky-col");
   });
 
   it("centers the today column on initial render", () => {

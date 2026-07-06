@@ -1,7 +1,7 @@
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type {
   Assignee,
   ComparableItemField,
@@ -46,6 +46,7 @@ interface RowProps extends Omit<ScheduleGridProps, "items" | "onReorder"> {
   isAdded?: boolean;
   rowIndex: number;
   rowCount: number;
+  pinnedColumns: Set<PinnableColumnKey>;
 }
 
 const progressFormatter = new Intl.NumberFormat("uk-UA", {
@@ -53,10 +54,52 @@ const progressFormatter = new Intl.NumberFormat("uk-UA", {
   maximumFractionDigits: 1,
 });
 
+const pinnableColumns = [
+  { key: "startMode", className: "col-start-mode", widthVar: "--c5", label: "Початок за" },
+  { key: "startDate", className: "col-start-date", widthVar: "--c6", label: "Початок" },
+  { key: "duration", className: "col-duration", widthVar: "--c7", label: "Робочі дні" },
+  { key: "endDate", className: "col-end-date", widthVar: "--c8", label: "Завершення" },
+  { key: "assignee", className: "col-assignee", widthVar: "--c9", label: "Виконавець" },
+  { key: "status", className: "col-status", widthVar: "--c10", label: "Статус" },
+  { key: "progress", className: "col-progress", widthVar: "--c11", label: "Виконання" },
+] as const;
+
+type PinnableColumnKey = (typeof pinnableColumns)[number]["key"];
+
+const getPinnedColumnLeft = (
+  key: PinnableColumnKey,
+  pinnedColumns: Set<PinnableColumnKey>,
+) => {
+  const leftParts = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
+  for (const column of pinnableColumns) {
+    if (column.key === key) break;
+    if (pinnedColumns.has(column.key)) leftParts.push(`var(${column.widthVar})`);
+  }
+  return `calc(${leftParts.join(" + ")})`;
+};
+
+const getPinnedColumnStyle = (
+  key: PinnableColumnKey,
+  pinnedColumns: Set<PinnableColumnKey>,
+) => pinnedColumns.has(key)
+  ? { left: getPinnedColumnLeft(key, pinnedColumns) } as CSSProperties
+  : undefined;
+
+const getPinnableColumnClassName = (
+  key: PinnableColumnKey,
+  className: string,
+  pinnedColumns: Set<PinnableColumnKey>,
+  extraClassName = "",
+) => [
+  pinnedColumns.has(key) ? "sticky-col" : "",
+  className,
+  extraClassName,
+].filter(Boolean).join(" ");
+
 const formatProgress = (value: number) =>
   `${progressFormatter.format(value)}%`;
 
-function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, rowIndex, rowCount, timelineDays, today, holidays = new Set(), editing, assignees, allItems, dependencyError, selectedAnalysisId, predecessorIds, successorIds, onToggleAnalysis, onUpdate, onDelete, onMoveBy }: RowProps) {
+function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, rowIndex, rowCount, timelineDays, today, holidays = new Set(), editing, assignees, allItems, dependencyError, selectedAnalysisId, predecessorIds, successorIds, pinnedColumns, onToggleAnalysis, onUpdate, onDelete, onMoveBy }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !editing });
   const style = { transform: CSS.Transform.toString(transform), transition } as CSSProperties;
   const endDate = addWorkingDays(item.startDate, item.durationDays, holidays);
@@ -79,7 +122,8 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
   ) => changedFields.has(field)
     ? { className: "changed-cell", title: `Було: ${previousValue}` }
     : {};
-  const stickyCellProps = (
+  const pinnableCellProps = (
+    key: PinnableColumnKey,
     className: string,
     field: ComparableItemField,
     previousValue: string,
@@ -87,7 +131,8 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
     const props = cellProps(field, previousValue);
     return {
       ...props,
-      className: ["sticky-col", className, props.className].filter(Boolean).join(" "),
+      className: getPinnableColumnClassName(key, className, pinnedColumns, props.className),
+      style: getPinnedColumnStyle(key, pinnedColumns),
     };
   };
   const previousPredecessors = previousItem?.predecessorIds
@@ -119,7 +164,11 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           {editing ? <button type="button" className="delete-row" onClick={() => onDelete(item.id)} aria-label={`Видалити рядок ${item.position}`}><TrashIcon /></button> : null}
         </div>
       </td>
-      <td className={`sticky-col col-start-mode dependency-cell ${changedFields.has("startMode") || changedFields.has("predecessorIds") ? "changed-cell" : ""}`} title={changedFields.has("startMode") || changedFields.has("predecessorIds") ? `Було: ${previousItem?.startMode === "manual" ? "Датою" : previousPredecessors}` : undefined}>
+      <td
+        className={getPinnableColumnClassName("startMode", "col-start-mode dependency-cell", pinnedColumns, changedFields.has("startMode") || changedFields.has("predecessorIds") ? "changed-cell" : "")}
+        style={getPinnedColumnStyle("startMode", pinnedColumns)}
+        title={changedFields.has("startMode") || changedFields.has("predecessorIds") ? `Було: ${previousItem?.startMode === "manual" ? "Датою" : previousPredecessors}` : undefined}
+      >
         {editing ? (
           <DependencyEditor
             item={item}
@@ -138,11 +187,11 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           </span>
         )}
       </td>
-      <td {...stickyCellProps("col-start-date", "startDate", formatDate(previousItem?.startDate ?? null))}>{editing ? <input className="cell-input date" type="date" readOnly={item.startMode === "dependencies"} value={item.startDate ?? ""} onChange={(e) => onUpdate(item.id, { startDate: e.target.value || null })} aria-label={`Дата початку рядка ${item.position}`} /> : formatDate(item.startDate)}</td>
-      <td className={`sticky-col col-duration duration-cell ${changedFields.has("durationDays") ? "changed-cell" : ""}`} title={changedFields.has("durationDays") ? `Було: ${previousItem?.durationDays ?? "—"}` : undefined}>{editing ? <input className="cell-input numeric" type="number" min="1" value={item.durationDays ?? ""} onChange={(e) => onUpdate(item.id, { durationDays: e.target.value ? Number(e.target.value) : null })} aria-label={`Робочі дні рядка ${item.position}`} /> : (item.durationDays ?? "—")}</td>
-      <td className={`sticky-col col-end-date ${scheduleChanged ? "changed-cell" : ""}`} title={scheduleChanged ? `Було: ${formatDate(addWorkingDays(previousItem?.startDate ?? null, previousItem?.durationDays ?? null, holidays))}` : undefined}>{formatDate(endDate)}</td>
-      <td {...stickyCellProps("col-assignee", "assignee", previousItem?.assignee ?? "—")}>{editing ? <input className="cell-input compact" list="assignee-options" value={item.assignee ?? ""} onChange={(e) => onUpdate(item.id, { assignee: e.target.value || null })} aria-label={`Виконавець рядка ${item.position}`} /> : <span className="assignee-code">{item.assignee ?? "—"}</span>}</td>
-      <td {...stickyCellProps("col-status", "status", previousItem?.status ?? "—")}>
+      <td {...pinnableCellProps("startDate", "col-start-date", "startDate", formatDate(previousItem?.startDate ?? null))}>{editing ? <input className="cell-input date" type="date" readOnly={item.startMode === "dependencies"} value={item.startDate ?? ""} onChange={(e) => onUpdate(item.id, { startDate: e.target.value || null })} aria-label={`Дата початку рядка ${item.position}`} /> : formatDate(item.startDate)}</td>
+      <td className={getPinnableColumnClassName("duration", "col-duration duration-cell", pinnedColumns, changedFields.has("durationDays") ? "changed-cell" : "")} style={getPinnedColumnStyle("duration", pinnedColumns)} title={changedFields.has("durationDays") ? `Було: ${previousItem?.durationDays ?? "—"}` : undefined}>{editing ? <input className="cell-input numeric" type="number" min="1" value={item.durationDays ?? ""} onChange={(e) => onUpdate(item.id, { durationDays: e.target.value ? Number(e.target.value) : null })} aria-label={`Робочі дні рядка ${item.position}`} /> : (item.durationDays ?? "—")}</td>
+      <td className={getPinnableColumnClassName("endDate", "col-end-date", pinnedColumns, scheduleChanged ? "changed-cell" : "")} style={getPinnedColumnStyle("endDate", pinnedColumns)} title={scheduleChanged ? `Було: ${formatDate(addWorkingDays(previousItem?.startDate ?? null, previousItem?.durationDays ?? null, holidays))}` : undefined}>{formatDate(endDate)}</td>
+      <td {...pinnableCellProps("assignee", "col-assignee", "assignee", previousItem?.assignee ?? "—")}>{editing ? <input className="cell-input compact" list="assignee-options" value={item.assignee ?? ""} onChange={(e) => onUpdate(item.id, { assignee: e.target.value || null })} aria-label={`Виконавець рядка ${item.position}`} /> : <span className="assignee-code">{item.assignee ?? "—"}</span>}</td>
+      <td {...pinnableCellProps("status", "col-status", "status", previousItem?.status ?? "—")}>
         {editing ? (
           <div className="status-edit-wrap">
             <select className="cell-input status-select" value={item.status} onChange={(e) => onUpdate(item.id, { status: e.target.value as ScheduleStatus })} aria-label={`Статус рядка ${item.position}`}>
@@ -155,7 +204,7 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           </div>
         ) : <span className={`status-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span>}
       </td>
-      <td className="sticky-col col-progress sheet-progress-cell">
+      <td className={getPinnableColumnClassName("progress", "col-progress sheet-progress-cell", pinnedColumns)} style={getPinnedColumnStyle("progress", pinnedColumns)}>
         {progress === null ? (
           <span className="progress-unavailable">—</span>
         ) : (
@@ -186,6 +235,7 @@ function RemovedScheduleRow({
   assignees,
   today,
   holidays,
+  pinnedColumns,
 }: {
   item: ScheduleItem;
   items: ScheduleItem[];
@@ -193,6 +243,7 @@ function RemovedScheduleRow({
   assignees: Assignee[];
   today: string;
   holidays?: HolidaySet;
+  pinnedColumns: Set<PinnableColumnKey>;
 }) {
   const positions = new Map(items.map((candidate) => [candidate.id, candidate.position]));
   return (
@@ -201,13 +252,13 @@ function RemovedScheduleRow({
       <td className="sticky-col col-section">{item.section}</td>
       <td className="sticky-col col-sheet">{item.sheetNumber}</td>
       <td className="sticky-col col-title">{item.title}</td>
-      <td className="sticky-col col-start-mode">{item.startMode === "manual" ? "Датою" : item.predecessorIds.map((id) => `№${positions.get(id) ?? "?"}`).join(", ")}</td>
-      <td className="sticky-col col-start-date">{formatDate(item.startDate)}</td>
-      <td className="sticky-col col-duration">{item.durationDays ?? "—"}</td>
-      <td className="sticky-col col-end-date">{formatDate(addWorkingDays(item.startDate, item.durationDays, holidays))}</td>
-      <td className="sticky-col col-assignee">{item.assignee ?? "—"}</td>
-      <td className="sticky-col col-status"><span className="status-badge removed">Видалено</span></td>
-      <td className="sticky-col col-progress sheet-progress-cell"><span className="progress-unavailable">—</span></td>
+      <td className={getPinnableColumnClassName("startMode", "col-start-mode", pinnedColumns)} style={getPinnedColumnStyle("startMode", pinnedColumns)}>{item.startMode === "manual" ? "Датою" : item.predecessorIds.map((id) => `№${positions.get(id) ?? "?"}`).join(", ")}</td>
+      <td className={getPinnableColumnClassName("startDate", "col-start-date", pinnedColumns)} style={getPinnedColumnStyle("startDate", pinnedColumns)}>{formatDate(item.startDate)}</td>
+      <td className={getPinnableColumnClassName("duration", "col-duration", pinnedColumns)} style={getPinnedColumnStyle("duration", pinnedColumns)}>{item.durationDays ?? "—"}</td>
+      <td className={getPinnableColumnClassName("endDate", "col-end-date", pinnedColumns)} style={getPinnedColumnStyle("endDate", pinnedColumns)}>{formatDate(addWorkingDays(item.startDate, item.durationDays, holidays))}</td>
+      <td className={getPinnableColumnClassName("assignee", "col-assignee", pinnedColumns)} style={getPinnedColumnStyle("assignee", pinnedColumns)}>{item.assignee ?? "—"}</td>
+      <td className={getPinnableColumnClassName("status", "col-status", pinnedColumns)} style={getPinnedColumnStyle("status", pinnedColumns)}><span className="status-badge removed">Видалено</span></td>
+      <td className={getPinnableColumnClassName("progress", "col-progress sheet-progress-cell", pinnedColumns)} style={getPinnedColumnStyle("progress", pinnedColumns)}><span className="progress-unavailable">—</span></td>
       {timelineDays.length > 0
         ? <GanttCells item={item} days={timelineDays} assignees={assignees} today={today} holidays={holidays} />
         : <td className="empty-timeline-cell" />}
@@ -219,6 +270,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const centeredToday = useRef(false);
+  const [pinnedColumns, setPinnedColumns] = useState<Set<PinnableColumnKey>>(() => new Set());
   const timelineKey = props.timelineDays.join("|");
   const visibleItemsKey = props.items.map((item) => item.id).sort().join("|");
   const previousById = new Map(
@@ -234,6 +286,41 @@ export function ScheduleGrid(props: ScheduleGridProps) {
   );
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (over && active.id !== over.id) props.onReorder(String(active.id), String(over.id));
+  };
+  const togglePinnedColumn = (key: PinnableColumnKey) => {
+    setPinnedColumns((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const renderPinnableHeader = (
+    key: PinnableColumnKey,
+    className: string,
+    label: string,
+  ) => {
+    const checked = pinnedColumns.has(key);
+    return (
+      <th
+        key={key}
+        rowSpan={2}
+        className={getPinnableColumnClassName(key, className, pinnedColumns)}
+        style={getPinnedColumnStyle(key, pinnedColumns)}
+        aria-label={label}
+      >
+        <div className="pinnable-header">
+          <span>{label}</span>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => togglePinnedColumn(key)}
+            aria-label={`Закріпити колонку ${label}`}
+            title={checked ? "Відкріпити колонку" : "Закріпити колонку"}
+          />
+        </div>
+      </th>
+    );
   };
 
   useEffect(() => {
@@ -269,13 +356,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
               <th rowSpan={2} className="sticky-col col-section">Розділ</th>
               <th rowSpan={2} className="sticky-col col-sheet">№ листа</th>
               <th rowSpan={2} className="sticky-col col-title">Найменування креслення</th>
-              <th rowSpan={2} className="sticky-col col-start-mode">Початок за</th>
-              <th rowSpan={2} className="sticky-col col-start-date">Початок</th>
-              <th rowSpan={2} className="sticky-col col-duration">Робочі дні</th>
-              <th rowSpan={2} className="sticky-col col-end-date">Завершення</th>
-              <th rowSpan={2} className="sticky-col col-assignee">Виконавець</th>
-              <th rowSpan={2} className="sticky-col col-status">Статус</th>
-              <th rowSpan={2} className="sticky-col col-progress">Виконання</th>
+              {pinnableColumns.map((column) => renderPinnableHeader(column.key, column.className, column.label))}
               {props.timelineDays.length > 0 ? <GanttMonthHeaders days={props.timelineDays} /> : <th rowSpan={2} className="empty-timeline-header">Календар робіт</th>}
             </tr>
             {props.timelineDays.length > 0 ? <tr><GanttDayHeaders days={props.timelineDays} today={props.today} holidays={props.holidays} /></tr> : null}
@@ -283,7 +364,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
           <SortableContext items={props.items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
             <tbody>
               {props.items.map((item, index) => (
-                <SortableScheduleRow key={item.id} {...props} allItems={props.allItems ?? props.items} item={item} previousItem={previousById.get(item.id)} comparisonEntry={comparisonById.get(item.id)} isAdded={addedIds.has(item.id)} rowIndex={index} rowCount={props.items.length} />
+                <SortableScheduleRow key={item.id} {...props} allItems={props.allItems ?? props.items} item={item} previousItem={previousById.get(item.id)} comparisonEntry={comparisonById.get(item.id)} isAdded={addedIds.has(item.id)} rowIndex={index} rowCount={props.items.length} pinnedColumns={pinnedColumns} />
               ))}
             </tbody>
           </SortableContext>
@@ -298,6 +379,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
                   assignees={props.assignees}
                   today={props.today}
                   holidays={props.holidays}
+                  pinnedColumns={pinnedColumns}
                 />
               ))}
             </tbody>

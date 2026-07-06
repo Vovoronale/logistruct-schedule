@@ -90,7 +90,9 @@ describe("schedule application", () => {
     expect(
       screen.getByRole("progressbar", { name: "Виконання листа 1" }),
     ).toHaveAttribute("value", "40");
-    await user.click(screen.getByRole("button", { name: "Прогрес" }));
+    const progressButton = screen.getByRole("button", { name: /Прогрес/ });
+    expect(progressButton).toHaveTextContent("80,0%");
+    await user.click(progressButton);
     expect(
       screen.getByRole("heading", { name: "Загальний прогрес" }),
     ).toBeVisible();
@@ -111,7 +113,7 @@ describe("schedule application", () => {
       screen.getByRole("combobox", { name: "Статус" }),
       "planned",
     );
-    await user.click(screen.getByRole("button", { name: "Прогрес" }));
+    await user.click(screen.getByRole("button", { name: /Прогрес/ }));
 
     expect(
       screen.getByRole("progressbar", { name: "Прогрес розділу КЗ-0" }),
@@ -127,7 +129,7 @@ describe("schedule application", () => {
     render(<App />);
     await screen.findByText(schedule.items[0].title);
 
-    await user.click(screen.getByRole("button", { name: "Прогрес" }));
+    await user.click(screen.getByRole("button", { name: /Прогрес/ }));
     expect(screen.getByRole("heading", { name: "Загальний прогрес" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Виконавці" }));

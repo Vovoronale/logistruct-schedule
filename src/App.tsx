@@ -126,6 +126,7 @@ export default function App() {
             assignees={assigneeNames}
             visibleCount={filteredItems.length}
             totalCount={schedule.items.length}
+            progressPercentage={progress.overall?.percentage ?? null}
             openPanel={openPanel}
             onChange={setFilters}
             onTogglePanel={togglePanel}

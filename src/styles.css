@@ -122,15 +122,12 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .schedule-table .col-section { left: var(--c1); }
 .schedule-table .col-sheet { left: calc(var(--c1) + var(--c2)); }
 .schedule-table .col-title { left: calc(var(--c1) + var(--c2) + var(--c3)); }
-.schedule-table .col-start-mode { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4)); }
-.schedule-table .col-start-date { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5)); }
-.schedule-table .col-duration { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6)); }
-.schedule-table .col-end-date { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7)); }
-.schedule-table .col-assignee { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7) + var(--c8)); }
-.schedule-table .col-status { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7) + var(--c8) + var(--c9)); }
-.schedule-table .col-progress { left: calc(var(--c1) + var(--c2) + var(--c3) + var(--c4) + var(--c5) + var(--c6) + var(--c7) + var(--c8) + var(--c9) + var(--c10)); box-shadow: 5px 0 8px -8px rgba(22,48,86,.65); }
+.schedule-table .sticky-col.col-progress { box-shadow: 5px 0 8px -8px rgba(22,48,86,.65); }
 .schedule-table tbody tr:nth-child(even) .sticky-col { background: var(--even); }
 .schedule-table tbody tr:hover .sticky-col { background: #f3f7fc; }
+.pinnable-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px; }
+.pinnable-header span { overflow: hidden; text-overflow: ellipsis; }
+.pinnable-header input { width: 13px; height: 13px; margin: 0; accent-color: var(--blue); cursor: pointer; }
 .section-badge, .status-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-weight: 750; white-space: nowrap; }
 .section-badge { min-width: 46px; padding: 5px 7px; color: #fff; }
 .section-badge.concrete { background: #8064a2; }
@@ -285,6 +282,10 @@ button.dependency-chip { cursor: pointer; }
 .workspace-count { flex: 0 0 auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .workspace-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .compact-action { height: 36px; padding-inline: 11px; font-size: 12px; }
+.progress-action { min-width: 142px; gap: 7px; }
+.toolbar-progress-meter { width: 42px; height: 6px; overflow: hidden; border-radius: 999px; background: #dce5f1; }
+.toolbar-progress-fill { display: block; height: 100%; border-radius: inherit; background: var(--blue); }
+.toolbar-progress-value { min-width: 38px; color: var(--blue); font-size: 11px; font-weight: 800; text-align: right; }
 .workspace-content { min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding-top: 10px; }
 .workspace-content > .schedule-frame { flex: 1 1 auto; }
 .workspace-popover { position: absolute; top: calc(100% + 6px); right: 14px; left: 14px; z-index: 30; max-height: min(420px, calc(100dvh - 150px)); overflow: auto; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; box-shadow: 0 18px 45px rgba(16,44,86,.2); }
@@ -323,6 +324,9 @@ button.dependency-chip { cursor: pointer; }
   .workspace-count { order: 1; font-size: 10px; }
   .workspace-actions { order: 1; margin-left: auto; }
   .compact-action { height: 34px; padding-inline: 8px; font-size: 11px; }
+  .progress-action { min-width: 128px; gap: 5px; }
+  .toolbar-progress-meter { width: 30px; }
+  .toolbar-progress-value { min-width: 34px; font-size: 10px; }
   .workspace-content { padding-top: 8px; }
   .filter-bar { padding: 12px 16px; }
   .legend-row { padding-inline: 16px; }
