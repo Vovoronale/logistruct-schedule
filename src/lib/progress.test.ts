@@ -57,10 +57,13 @@ describe("calculateItemProgress", () => {
     ).toBe(100);
   });
 
-  it("excludes sheets without a valid start or duration", () => {
+  it("uses today as the start date for sheets without a fixed start", () => {
     expect(
       calculateItemProgress(makeItem({ startDate: null }), "2026-07-07"),
-    ).toBeNull();
+    ).toBe(0);
+  });
+
+  it("excludes sheets without a valid duration", () => {
     expect(
       calculateItemProgress(makeItem({ durationDays: null }), "2026-07-07"),
     ).toBeNull();
@@ -89,12 +92,6 @@ describe("calculateScheduleProgress", () => {
           durationDays: 5,
           status: "planned",
         }),
-        makeItem({
-          id: "c",
-          section: "Новий",
-          durationDays: 5,
-          startDate: null,
-        }),
       ],
       "2026-07-03",
     );
@@ -112,9 +109,18 @@ describe("calculateScheduleProgress", () => {
     });
   });
 
-  it("returns no summary when every sheet is incomplete", () => {
+  it("includes sheets without a fixed start when they have a duration", () => {
     const result = calculateScheduleProgress(
       [makeItem({ startDate: null })],
+      "2026-07-03",
+    );
+
+    expect(result.overall).toMatchObject({ sheetCount: 1, totalDays: 5 });
+  });
+
+  it("returns no summary when every sheet lacks duration", () => {
+    const result = calculateScheduleProgress(
+      [makeItem({ durationDays: null })],
       "2026-07-03",
     );
 

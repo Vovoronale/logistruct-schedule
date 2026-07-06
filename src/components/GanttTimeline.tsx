@@ -1,5 +1,5 @@
 import type { Assignee, ScheduleItem } from "../types";
-import { addWorkingDays, dayNumber, formatMonth, isNonWorkingDay, todayIso, weekdayLabel, type HolidaySet } from "../lib/dates";
+import { addWorkingDays, dayNumber, effectiveStartDate, formatMonth, isNonWorkingDay, todayIso, weekdayLabel, type HolidaySet } from "../lib/dates";
 import { assigneeColor, readableTextColor } from "../lib/colors";
 
 interface MonthGroup { label: string; count: number; }
@@ -37,8 +37,9 @@ export function GanttDayHeaders({ days, today = todayIso(), holidays = new Set()
 }
 
 export function GanttCells({ item, previousItem, days, assignees, today = todayIso(), holidays = new Set() }: { item: ScheduleItem; previousItem?: ScheduleItem; days: string[]; assignees: Assignee[]; today?: string; holidays?: HolidaySet }) {
-  const end = addWorkingDays(item.startDate, item.durationDays, holidays);
-  const active = days.map((day) => Boolean(item.startDate && end && day >= item.startDate && day < end));
+  const start = effectiveStartDate(item.startDate, today);
+  const end = addWorkingDays(start, item.durationDays, holidays);
+  const active = days.map((day) => Boolean(start && end && day >= start && day < end));
   const previousEnd = addWorkingDays(
     previousItem?.startDate ?? null,
     previousItem?.durationDays ?? null,
@@ -81,7 +82,7 @@ export function GanttCells({ item, previousItem, days, assignees, today = todayI
             style={isPast
               ? { backgroundColor: "#A8B0BC", color: "#FFFFFF" }
               : { backgroundColor: color, color: textColor }}
-            title={`${item.title}: ${item.startDate} — ${end}`}
+            title={`${item.title}: ${start} — ${end}`}
           >
             {isFirst ? (item.assignee ?? "—") : ""}
           </span>

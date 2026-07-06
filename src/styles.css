@@ -66,10 +66,22 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .search-control input, .select-control select { width: 100%; border: 0; outline: 0; background: transparent; color: #17325c; font-size: 13px; }
 .search-control input::placeholder { color: #8c9cb3; }
 .select-control { min-width: 160px; padding: 0 6px 0 11px; }
+.multi-select-control { position: relative; padding: 0; }
+.multi-select-control summary { height: 100%; padding: 0 26px 0 11px; display: flex; align-items: center; color: #17325c; font-size: 13px; cursor: pointer; list-style: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.multi-select-control summary::-webkit-details-marker { display: none; }
+.multi-select-control summary::after { content: ""; position: absolute; right: 11px; top: 50%; width: 7px; height: 7px; border-right: 1px solid #667892; border-bottom: 1px solid #667892; transform: translateY(-65%) rotate(45deg); }
+.multi-select-options { position: absolute; z-index: 40; top: calc(100% + 5px); left: 0; min-width: 210px; max-height: 260px; padding: 7px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; box-shadow: 0 14px 32px rgba(16,44,86,.18); }
+.multi-select-options label { display: flex; align-items: center; gap: 7px; padding: 6px; border-radius: 5px; color: #17325c; font-size: 12px; cursor: pointer; }
+.multi-select-options label:hover { background: #eef4fb; }
+.multi-select-options input { accent-color: var(--blue); }
 .filter-hint { margin-left: auto; color: #91a0b6; font-size: 12px; white-space: nowrap; }
 .legend-row { min-height: 50px; padding: 8px 26px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 12px; }
+.assignee-panel { display: grid; gap: 12px; }
+.assignee-free-date { display: flex; align-items: center; gap: 8px; color: #526985; font-size: 12px; font-weight: 650; }
+.assignee-free-date input { height: 34px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 8px; color: #17325c; }
 .assignee-legend { display: flex; align-items: center; justify-content: flex-end; gap: 13px; flex-wrap: wrap; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; color: #415777; font-weight: 650; }
+.legend-item small { color: #71839f; font-size: 11px; font-weight: 650; }
 .legend-item i { width: 10px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(16,44,86,.08); }
 .progress-overview { margin: 0 24px 16px; padding: 16px; display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafd; }
 .progress-overview.empty { color: var(--muted); }
@@ -128,6 +140,11 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .pinnable-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px; }
 .pinnable-header span { overflow: hidden; text-overflow: ellipsis; }
 .pinnable-header input { width: 13px; height: 13px; margin: 0; accent-color: var(--blue); cursor: pointer; }
+.sortable-header { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 21px; align-items: center; gap: 4px; }
+.sortable-header > span { overflow: hidden; text-overflow: ellipsis; }
+.sort-button { width: 21px; height: 21px; border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; color: #627791; background: #fff; cursor: pointer; }
+.sort-button:hover, .sort-button.active { color: var(--blue); border-color: #9bb7e6; background: #eef4ff; }
+.sort-button svg { width: 13px; height: 13px; }
 .section-badge, .status-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-weight: 750; white-space: nowrap; }
 .section-badge { min-width: 46px; padding: 5px 7px; color: #fff; }
 .section-badge.concrete { background: #8064a2; }
@@ -152,6 +169,7 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .dependency-options label { display: flex; align-items: flex-start; gap: 7px; padding: 6px; border-radius: 4px; cursor: pointer; }
 .dependency-options label:hover { background: #eef4fb; }
 .dependency-options span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dependency-done { width: 100%; height: 34px; margin-top: 5px; font-size: 12px; }
 .dependency-chips, .dependency-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
 .dependency-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 7px; border: 1px solid #9db4d5; border-radius: 999px; color: #285887; background: #edf4ff; font-size: 10px; font-weight: 750; }
 button.dependency-chip { cursor: pointer; }

@@ -234,6 +234,46 @@ describe("ScheduleGrid calendar columns", () => {
     expect(screen.getByTestId("schedule-row-empty")).toHaveClass("row-empty");
   });
 
+  it("sorts visible rows from column header buttons", async () => {
+    const user = userEvent.setup();
+    const items = [
+      { ...item, id: "b", position: 1, title: "Бета" },
+      { ...item, id: "a", position: 2, title: "Альфа" },
+    ];
+
+    const { container } = render(
+      <ScheduleGrid
+        items={items}
+        timelineDays={[]}
+        today="2026-07-04"
+        editing={false}
+        assignees={[]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    const visibleTitles = () => Array.from(
+      container.querySelectorAll<HTMLTableRowElement>("tbody tr"),
+      (row) => row.querySelector(".col-title")?.textContent ?? "",
+    );
+
+    expect(visibleTitles()[0]).toContain("Бета");
+    expect(visibleTitles()[1]).toContain("Альфа");
+
+    await user.click(screen.getByRole("button", {
+      name: "Сортувати Найменування креслення за зростанням",
+    }));
+    expect(visibleTitles()[0]).toContain("Альфа");
+
+    await user.click(screen.getByRole("button", {
+      name: "Сортувати Найменування креслення за спаданням",
+    }));
+    expect(visibleTitles()[0]).toContain("Бета");
+  });
+
   it("renders dependency routes over the gantt and keeps hidden links unfinished", async () => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
       callback(0);

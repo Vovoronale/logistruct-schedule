@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
 
-const filters = { query: "", section: "", assignee: "", status: "" } as const;
+const filters = { query: "", section: [], assignee: [], status: [] };
 
 describe("WorkspaceToolbar", () => {
   it("renders compact schedule controls and reports filter changes", async () => {
@@ -30,6 +30,54 @@ describe("WorkspaceToolbar", () => {
 
     await user.type(screen.getByRole("textbox", { name: "Пошук по всіх колонках" }), "п");
     expect(onChange).toHaveBeenLastCalledWith({ ...filters, query: "п" });
+  });
+
+  it("lets users select multiple values for exact filters", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    const { rerender } = render(
+      <WorkspaceToolbar
+        filters={filters}
+        sections={["КЗ-0", "КМ2"]}
+        assignees={["Іван", "Олена"]}
+        visibleCount={12}
+        totalCount={68}
+        openPanel={null}
+        onChange={onChange}
+        onTogglePanel={vi.fn()}
+        onCompare={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText("Усі розділи"));
+    await user.click(screen.getByRole("checkbox", { name: "КЗ-0" }));
+    expect(onChange).toHaveBeenLastCalledWith({ ...filters, section: ["КЗ-0"] });
+
+    rerender(
+      <WorkspaceToolbar
+        filters={{ ...filters, assignee: ["Іван"] }}
+        sections={["КЗ-0", "КМ2"]}
+        assignees={["Іван", "Олена"]}
+        visibleCount={12}
+        totalCount={68}
+        openPanel={null}
+        onChange={onChange}
+        onTogglePanel={vi.fn()}
+        onCompare={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByLabelText("Виконавець"));
+    await user.click(screen.getByRole("checkbox", { name: "Олена" }));
+    expect(onChange).toHaveBeenLastCalledWith({ ...filters, assignee: ["Іван", "Олена"] });
+
+    await user.click(screen.getByText("Усі статуси"));
+    await user.click(screen.getByRole("checkbox", { name: "Заплановано" }));
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...filters,
+      assignee: ["Іван"],
+      status: ["planned"],
+    });
   });
 
   it("opens one information panel and starts comparison through callbacks", async () => {

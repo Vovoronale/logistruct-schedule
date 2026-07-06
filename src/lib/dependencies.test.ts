@@ -116,6 +116,15 @@ describe("recalculateSchedule", () => {
     ], new Set(["2026-07-07"]));
     expect(result[1].startDate).toBe("2026-07-08");
   });
+
+  it("uses today as the predecessor start until a manual date is set", () => {
+    const result = recalculateSchedule([
+      item("a", 1, { startDate: null, durationDays: 2 }),
+      item("b", 2, { startMode: "dependencies", predecessorIds: ["a"] }),
+    ], new Set(), "2026-07-06");
+
+    expect(result[1].startDate).toBe("2026-07-08");
+  });
 });
 
 describe("dependency traversal", () => {

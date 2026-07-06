@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   addWorkingDays,
   buildTimelineDays,
+  effectiveStartDate,
   isNonWorkingDay,
   isWeekend,
+  workingDaysBetween,
   workingDaysAfter,
 } from "./dates";
 
@@ -25,6 +27,11 @@ describe("addWorkingDays", () => {
 });
 
 describe("timeline helpers", () => {
+  it("uses today as the effective start until a row date is set", () => {
+    expect(effectiveStartDate(null, "2026-07-06")).toBe("2026-07-06");
+    expect(effectiveStartDate("2026-07-08", "2026-07-06")).toBe("2026-07-08");
+  });
+
   it("recognizes weekends without local-time drift", () => {
     expect(isWeekend("2026-07-04")).toBe(true);
     expect(isWeekend("2026-07-06")).toBe(false);
@@ -62,6 +69,13 @@ describe("timeline helpers", () => {
       "2026-07-05",
     ]);
   });
+
+  it("builds the timeline from today for rows without a start date", () => {
+    expect(buildTimelineDays(
+      [{ startDate: null, durationDays: 3 }],
+      "2026-07-06",
+    )).toContain("2026-07-09");
+  });
 });
 
 describe("workingDaysAfter", () => {
@@ -82,5 +96,17 @@ describe("workingDaysAfter", () => {
   it("returns null for invalid dates and zero before the start", () => {
     expect(workingDaysAfter("bad-date", "2026-07-07")).toBeNull();
     expect(workingDaysAfter("2026-07-07", "2026-07-03")).toBe(0);
+  });
+
+  it("lists working days in an inclusive date range", () => {
+    expect(workingDaysBetween("2026-07-06", "2026-07-10")).toEqual([
+      "2026-07-06",
+      "2026-07-07",
+      "2026-07-08",
+      "2026-07-09",
+      "2026-07-10",
+    ]);
+    expect(workingDaysBetween("2026-07-06", "2026-07-08", new Set(["2026-07-07"])))
+      .toEqual(["2026-07-06", "2026-07-08"]);
   });
 });

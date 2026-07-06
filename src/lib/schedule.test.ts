@@ -34,9 +34,9 @@ describe("filterItems", () => {
     expect(
       filterItems(items, {
         query: "ферма",
-        section: "КМ2",
-        assignee: "",
-        status: "planned",
+        section: ["КМ2"],
+        assignee: [],
+        status: ["planned"],
       }),
     ).toEqual([items[0]]);
   });
@@ -62,9 +62,9 @@ describe("filterItems", () => {
     const query = (value: string) =>
       filterItems([searchable, other], {
         query: value,
-        section: "",
-        assignee: "",
-        status: "",
+        section: [],
+        assignee: [],
+        status: [],
       }, {
         today: "2026-07-06",
       });
@@ -78,6 +78,23 @@ describe("filterItems", () => {
     expect(query("Олена")).toEqual([searchable]);
     expect(query("У роботі")).toEqual([searchable]);
     expect(query("33,3%")).toEqual([searchable]);
+  });
+
+  it("allows multiple exact options in section, assignee and status filters", () => {
+    const mixed = [
+      { ...items[0], assignee: "Іван" },
+      { ...items[1], assignee: "Олена" },
+      { ...items[2], assignee: "Марія" },
+    ];
+
+    expect(
+      filterItems(mixed, {
+        query: "",
+        section: ["КМ2", "КЗ-0"],
+        assignee: ["Іван", "Марія"],
+        status: ["planned"],
+      }),
+    ).toEqual([mixed[0], mixed[2]]);
   });
 });
 

@@ -1,12 +1,12 @@
 import type { ScheduleItem, ScheduleStatus } from "../types";
-import { addWorkingDays, todayIso, type HolidaySet } from "./dates";
+import { addWorkingDays, effectiveStartDate, todayIso, type HolidaySet } from "./dates";
 import { calculateItemProgress } from "./progress";
 
 export interface ScheduleFilters {
   query: string;
-  section: string;
-  assignee: string;
-  status: ScheduleStatus | "";
+  section: string[];
+  assignee: string[];
+  status: ScheduleStatus[];
 }
 
 interface ScheduleFilterContext {
@@ -66,8 +66,10 @@ function searchableTextForItem(
   context: ScheduleFilterContext = {},
 ): string {
   const holidays = context.holidays ?? new Set();
-  const endDate = addWorkingDays(item.startDate, item.durationDays, holidays);
-  const progress = calculateItemProgress(item, context.today ?? todayIso(), holidays);
+  const today = context.today ?? todayIso();
+  const startDate = effectiveStartDate(item.startDate, today);
+  const endDate = addWorkingDays(startDate, item.durationDays, holidays);
+  const progress = calculateItemProgress(item, today, holidays);
   const values = [
     `№${item.position}`,
     String(item.position),
@@ -75,8 +77,8 @@ function searchableTextForItem(
     String(item.sheetNumber),
     item.title,
     START_MODE_LABELS[item.startMode],
-    item.startDate ?? "",
-    formatDateForSearch(item.startDate),
+    startDate,
+    formatDateForSearch(startDate),
     item.durationDays === null ? "" : String(item.durationDays),
     endDate ?? "",
     formatDateForSearch(endDate),
@@ -102,9 +104,9 @@ export function filterItems(
   const query = normalizeSearchValue(filters.query.trim());
   return items.filter((item) => {
     if (query && !searchableTextForItem(item, context).includes(query)) return false;
-    if (filters.section && item.section !== filters.section) return false;
-    if (filters.assignee && item.assignee !== filters.assignee) return false;
-    if (filters.status && item.status !== filters.status) return false;
+    if (filters.section.length > 0 && !filters.section.includes(item.section)) return false;
+    if (filters.assignee.length > 0 && (!item.assignee || !filters.assignee.includes(item.assignee))) return false;
+    if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
     return true;
   });
 }
@@ -135,7 +137,7 @@ export function isOverdue(
   holidays: HolidaySet = new Set(),
 ): boolean {
   if (item.status === "completed") return false;
-  const endDate = addWorkingDays(item.startDate, item.durationDays, holidays);
+  const endDate = addWorkingDays(effectiveStartDate(item.startDate, today), item.durationDays, holidays);
   return endDate !== null && endDate < today;
 }
 

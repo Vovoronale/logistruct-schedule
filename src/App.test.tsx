@@ -109,10 +109,8 @@ describe("schedule application", () => {
     render(<App />);
     await screen.findByText(schedule.items[0].title);
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Статус" }),
-      "planned",
-    );
+    await user.click(screen.getByText("Усі статуси"));
+    await user.click(screen.getByRole("checkbox", { name: "Заплановано" }));
     await user.click(screen.getByRole("button", { name: /Прогрес/ }));
 
     expect(
@@ -153,6 +151,49 @@ describe("schedule application", () => {
     render(<App />);
     expect(await screen.findByRole("button", { name: "Редагувати" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Додати рядок" })).not.toBeInTheDocument();
+  });
+
+  it("shows the blocking row when dependency errors prevent saving", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = input instanceof Request
+        ? input.url
+        : input instanceof URL
+          ? input.href
+          : input;
+      const body = url.includes("/api/auth/session")
+        ? { authenticated: true }
+        : {
+            ...schedule,
+            items: [
+              schedule.items[0],
+              {
+                ...schedule.items[1],
+                id: "drawing-002",
+                position: 2,
+                startMode: "dependencies",
+                startDate: "2026-07-08",
+                predecessorIds: ["drawing-001"],
+              },
+            ],
+          };
+      return Promise.resolve(new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    }));
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(schedule.items[0].title);
+
+    await user.click(screen.getByRole("button", { name: "Редагувати" }));
+    await user.selectOptions(
+      screen.getByLabelText("Спосіб початку роботи №1"),
+      "dependencies",
+    );
+
+    expect(await screen.findByText("Рядок №1: Оберіть хоча б одну попередню роботу"))
+      .toBeVisible();
+    expect(screen.getByRole("button", { name: "Зберегти зміни" })).toBeDisabled();
   });
 
   it("loads and displays a retained schedule comparison", async () => {

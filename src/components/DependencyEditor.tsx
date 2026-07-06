@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ScheduleItem, ScheduleStartMode } from "../types";
 
 interface DependencyEditorProps {
@@ -13,9 +14,14 @@ export function DependencyEditor({
   error,
   onChange,
 }: DependencyEditorProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const candidates = items
     .filter((candidate) => candidate.id !== item.id)
-    .sort((left, right) => left.position - right.position);
+    .sort((left, right) => {
+      const leftSameAssignee = item.assignee && left.assignee === item.assignee ? 0 : 1;
+      const rightSameAssignee = item.assignee && right.assignee === item.assignee ? 0 : 1;
+      return leftSameAssignee - rightSameAssignee || left.position - right.position;
+    });
   const byId = new Map(items.map((candidate) => [candidate.id, candidate]));
 
   const changeMode = (mode: ScheduleStartMode) => {
@@ -44,7 +50,12 @@ export function DependencyEditor({
       </select>
       {item.startMode === "dependencies" ? (
         <>
-          <details className="dependency-picker">
+          <details
+            className="dependency-picker"
+            aria-label="Список залежностей"
+            open={pickerOpen}
+            onToggle={(event) => setPickerOpen(event.currentTarget.open)}
+          >
             <summary>
               {item.predecessorIds.length > 0
                 ? `Обрано: ${item.predecessorIds.length}`
@@ -64,6 +75,13 @@ export function DependencyEditor({
                 </label>
               ))}
               {candidates.length === 0 ? <span>Немає інших робіт</span> : null}
+              <button
+                className="button secondary dependency-done"
+                type="button"
+                onClick={() => setPickerOpen(false)}
+              >
+                Готово
+              </button>
             </div>
           </details>
           <div className="dependency-chips">

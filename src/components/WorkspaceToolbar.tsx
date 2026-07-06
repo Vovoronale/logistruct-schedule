@@ -27,6 +27,54 @@ function formatPercent(value: number): string {
   return `${percentFormatter.format(value)}%`;
 }
 
+interface MultiSelectControlProps<T extends string> {
+  label: string;
+  emptyLabel: string;
+  values: T[];
+  options: { value: T; label: string }[];
+  onChange: (values: T[]) => void;
+  className?: string;
+}
+
+function MultiSelectControl<T extends string>({
+  label,
+  emptyLabel,
+  values,
+  options,
+  onChange,
+  className = "",
+}: MultiSelectControlProps<T>) {
+  const toggle = (value: T) => {
+    onChange(values.includes(value)
+      ? values.filter((candidate) => candidate !== value)
+      : [...values, value]);
+  };
+  const summary = values.length === 0
+    ? emptyLabel
+    : options
+        .filter((option) => values.includes(option.value))
+        .map((option) => option.label)
+        .join(", ");
+
+  return (
+    <details className={`select-control multi-select-control ${className}`}>
+      <summary aria-label={label}>{summary}</summary>
+      <div className="multi-select-options">
+        {options.map((option) => (
+          <label key={option.value}>
+            <input
+              type="checkbox"
+              checked={values.includes(option.value)}
+              onChange={() => toggle(option.value)}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function WorkspaceToolbar({
   filters,
   sections,
@@ -58,32 +106,29 @@ export function WorkspaceToolbar({
           placeholder="Пошук по всіх колонках"
         />
       </label>
-      <label className="select-control">
-        <span className="sr-only">Розділ</span>
-        <select value={filters.section} onChange={(event) => set("section", event.target.value)}>
-          <option value="">Усі розділи</option>
-          {sections.map((section) => <option key={section}>{section}</option>)}
-        </select>
-      </label>
-      <label className="select-control">
-        <span className="sr-only">Виконавець</span>
-        <select value={filters.assignee} onChange={(event) => set("assignee", event.target.value)}>
-          <option value="">Усі виконавці</option>
-          {assignees.map((assignee) => <option key={assignee}>{assignee}</option>)}
-        </select>
-      </label>
-      <label className="select-control status-control">
-        <span className="sr-only">Статус</span>
-        <select
-          value={filters.status}
-          onChange={(event) => set("status", event.target.value as ScheduleStatus | "")}
-        >
-          <option value="">Усі статуси</option>
-          {(Object.entries(STATUS_LABELS) as [ScheduleStatus, string][]).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      </label>
+      <MultiSelectControl
+        label="Розділ"
+        emptyLabel="Усі розділи"
+        values={filters.section}
+        options={sections.map((section) => ({ value: section, label: section }))}
+        onChange={(values) => set("section", values)}
+      />
+      <MultiSelectControl
+        label="Виконавець"
+        emptyLabel="Усі виконавці"
+        values={filters.assignee}
+        options={assignees.map((assignee) => ({ value: assignee, label: assignee }))}
+        onChange={(values) => set("assignee", values)}
+      />
+      <MultiSelectControl
+        label="Статус"
+        emptyLabel="Усі статуси"
+        values={filters.status}
+        options={(Object.entries(STATUS_LABELS) as [ScheduleStatus, string][])
+          .map(([value, label]) => ({ value, label }))}
+        onChange={(values) => set("status", values)}
+        className="status-control"
+      />
       <span className="workspace-count">{visibleCount} із {totalCount} креслень</span>
       <div className="workspace-actions">
         <button

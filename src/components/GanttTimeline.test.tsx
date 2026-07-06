@@ -98,6 +98,24 @@ it("marks the first and last current bar segments as dependency anchors", () => 
   expect(lastCurrentBar).toHaveAttribute("data-gantt-end", "true");
 });
 
+it("uses today as a dynamic start for current bars without a fixed start date", () => {
+  const { container } = render(
+    <table><tbody><tr>
+      <GanttCells
+        item={{ ...item, startDate: null, durationDays: 2 }}
+        days={["2026-07-06", "2026-07-07", "2026-07-08"]}
+        assignees={assignees}
+        today="2026-07-06"
+      />
+    </tr></tbody></table>,
+  );
+
+  expect(container.querySelector('td[data-date="2026-07-06"] .gantt-bar'))
+    .toHaveAttribute("data-gantt-start", "true");
+  expect(container.querySelector('td[data-date="2026-07-07"] .gantt-bar'))
+    .toBeInTheDocument();
+});
+
 it("draws a historical outline behind a shifted current bar", () => {
   const previousItem = { ...item, startDate: "2026-07-06" };
   const currentItem = { ...item, startDate: "2026-07-08" };

@@ -19,7 +19,7 @@ import { calculateScheduleProgress } from "./lib/progress";
 import { filterItems, type ScheduleFilters, uniqueSorted } from "./lib/schedule";
 import "./styles.css";
 
-const EMPTY_FILTERS: ScheduleFilters = { query: "", section: "", assignee: "", status: "" };
+const EMPTY_FILTERS: ScheduleFilters = { query: "", section: [], assignee: [], status: [] };
 
 export default function App() {
   const holidays = useHolidays();
@@ -147,7 +147,13 @@ export default function App() {
           ) : null}
           {openPanel === "assignees" ? (
             <section className="workspace-popover assignees-popover" id="assignees-panel">
-              <AssigneeLegend assignees={schedule.assignees} visibleAssignees={assignedNames} />
+              <AssigneeLegend
+                assignees={schedule.assignees}
+                visibleAssignees={assignedNames}
+                items={schedule.items}
+                today={today}
+                holidays={holidays}
+              />
             </section>
           ) : null}
         </div>
@@ -157,7 +163,9 @@ export default function App() {
             dirty={schedule.isDirty}
             canSave={schedule.canSave}
             saving={schedule.saving}
-            error={schedule.dependencyError?.message}
+            error={schedule.dependencyError
+              ? `Рядок №${schedule.items.find((item) => item.id === schedule.dependencyError?.itemId)?.position ?? "?"}: ${schedule.dependencyError.message}`
+              : undefined}
             onAdd={schedule.addItem}
             onManageAssignees={() => setAssigneeDialogOpen(true)}
             onSave={() => void save()}

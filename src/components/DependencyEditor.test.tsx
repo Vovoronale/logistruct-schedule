@@ -61,6 +61,50 @@ describe("DependencyEditor", () => {
     expect(onChange).toHaveBeenNthCalledWith(2, { predecessorIds: ["b"] });
   });
 
+  it("prioritizes dependency candidates with the same assignee", async () => {
+    const user = userEvent.setup();
+    const item = row("c", 3, {
+      startMode: "dependencies",
+      assignee: "Олена",
+    });
+    render(
+      <DependencyEditor
+        item={item}
+        items={[
+          row("a", 1, { assignee: "Іван" }),
+          row("b", 2, { assignee: "Олена" }),
+          item,
+        ]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText("Обрати роботи"));
+
+    const options = screen.getAllByLabelText(/№\d — Робота/);
+    expect(options[0]).toHaveAccessibleName("№2 — Робота b");
+    expect(options[1]).toHaveAccessibleName("№1 — Робота a");
+  });
+
+  it("closes the dependency picker with a confirmation button", async () => {
+    const user = userEvent.setup();
+    const item = row("c", 3, { startMode: "dependencies" });
+    render(
+      <DependencyEditor
+        item={item}
+        items={[row("a", 1), item]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText("Обрати роботи"));
+    expect(screen.getByRole("group", { name: "Список залежностей" })).toHaveAttribute("open");
+
+    await user.click(screen.getByRole("button", { name: "Готово" }));
+
+    expect(screen.getByRole("group", { name: "Список залежностей" })).not.toHaveAttribute("open");
+  });
+
   it("renders the current number for a stable selected id", () => {
     const selected = row("a", 1);
     const item = row("b", 2, {

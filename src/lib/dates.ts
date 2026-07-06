@@ -51,6 +51,35 @@ export function addWorkingDays(
   return toIsoDate(cursor);
 }
 
+export function effectiveStartDate(
+  startDate: string | null,
+  today = todayIso(),
+): string {
+  if (startDate === null) return today;
+  return startDate;
+}
+
+export function workingDaysBetween(
+  startValue: string,
+  endValue: string,
+  holidays: HolidaySet = NO_HOLIDAYS,
+): string[] {
+  const start = parseIsoDate(startValue);
+  const end = parseIsoDate(endValue);
+  if (!start || !end || end < start) return [];
+
+  const days: string[] = [];
+  for (
+    let cursor = start;
+    cursor <= end;
+    cursor = shiftCalendarDays(cursor, 1)
+  ) {
+    const value = toIsoDate(cursor);
+    if (!isNonWorkingDay(value, holidays)) days.push(value);
+  }
+  return days;
+}
+
 export function workingDaysAfter(
   startValue: string,
   endValue: string,
@@ -86,8 +115,9 @@ export function buildTimelineDays(
   let latest = parseIsoDate(today);
 
   for (const item of items) {
-    const start = parseIsoDate(item.startDate);
-    const endValue = addWorkingDays(item.startDate, item.durationDays, holidays);
+    const effectiveStart = effectiveStartDate(item.startDate, today);
+    const start = parseIsoDate(effectiveStart);
+    const endValue = addWorkingDays(effectiveStart, item.durationDays, holidays);
     const end = parseIsoDate(endValue);
     if (!start || !end) continue;
     if (!earliest || start < earliest) earliest = start;

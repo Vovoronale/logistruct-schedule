@@ -1,4 +1,10 @@
 import type { Assignee, ScheduleItem } from "../types";
+import {
+  addWorkingDays,
+  effectiveStartDate,
+  workingDaysBetween,
+  type HolidaySet,
+} from "./dates";
 
 export function assigneeUsageCount(items: ScheduleItem[], name: string): number {
   let count = 0;
@@ -6,6 +12,30 @@ export function assigneeUsageCount(items: ScheduleItem[], name: string): number 
     if (item.assignee === name) count += 1;
   }
   return count;
+}
+
+export function assigneeFreeDays(
+  items: ScheduleItem[],
+  name: string,
+  targetDate: string,
+  today: string,
+  holidays: HolidaySet = new Set(),
+): number {
+  const available = workingDaysBetween(today, targetDate, holidays);
+  if (available.length === 0) return 0;
+
+  const busy = new Set<string>();
+  for (const item of items) {
+    if (item.assignee !== name || item.durationDays === null) continue;
+    const start = effectiveStartDate(item.startDate, today);
+    const end = addWorkingDays(start, item.durationDays, holidays);
+    if (!end) continue;
+    for (const day of workingDaysBetween(start, end, holidays)) {
+      if (day >= today && day <= targetDate && day < end) busy.add(day);
+    }
+  }
+
+  return available.filter((day) => !busy.has(day)).length;
 }
 
 export function applyAssigneeChanges(

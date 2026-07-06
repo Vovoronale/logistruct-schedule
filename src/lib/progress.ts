@@ -1,5 +1,5 @@
 import type { ScheduleItem } from "../types";
-import { addWorkingDays, workingDaysAfter, type HolidaySet } from "./dates";
+import { addWorkingDays, effectiveStartDate, workingDaysAfter, type HolidaySet } from "./dates";
 
 export interface ProgressSummary {
   percentage: number;
@@ -22,14 +22,14 @@ export function calculateItemProgress(
   holidays: HolidaySet = new Set(),
 ): number | null {
   if (
-    !addWorkingDays(item.startDate, item.durationDays, holidays) ||
+    !addWorkingDays(effectiveStartDate(item.startDate, today), item.durationDays, holidays) ||
     item.durationDays === null
   ) {
     return null;
   }
   if (item.status === "completed") return 100;
 
-  const elapsed = workingDaysAfter(item.startDate!, today, holidays);
+  const elapsed = workingDaysAfter(effectiveStartDate(item.startDate, today), today, holidays);
   if (elapsed === null) return null;
   return Math.min(95, Math.max(0, (elapsed / item.durationDays) * 100));
 }

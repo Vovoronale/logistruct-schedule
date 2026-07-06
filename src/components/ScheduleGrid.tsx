@@ -1,7 +1,7 @@
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type {
   Assignee,
   ComparableItemField,
@@ -10,7 +10,7 @@ import type {
   ScheduleItem,
   ScheduleStatus,
 } from "../types";
-import { addWorkingDays, formatDate, type HolidaySet } from "../lib/dates";
+import { addWorkingDays, effectiveStartDate, formatDate, type HolidaySet } from "../lib/dates";
 import { calculateItemProgress } from "../lib/progress";
 import { getScheduleRowCompleteness, isOverdue, STATUS_LABELS } from "../lib/schedule";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, TrashIcon } from "./Icons";
@@ -65,6 +65,13 @@ const pinnableColumns = [
 ] as const;
 
 type PinnableColumnKey = (typeof pinnableColumns)[number]["key"];
+type SortKey = "position" | "section" | "sheetNumber" | "title" | PinnableColumnKey;
+type SortDirection = "asc" | "desc";
+
+const sortCollator = new Intl.Collator("uk-UA", {
+  numeric: true,
+  sensitivity: "base",
+});
 
 const getPinnedColumnLeft = (
   key: PinnableColumnKey,
@@ -99,10 +106,64 @@ const getPinnableColumnClassName = (
 const formatProgress = (value: number) =>
   `${progressFormatter.format(value)}%`;
 
+const sortValue = (
+  item: ScheduleItem,
+  key: SortKey,
+  today: string,
+  holidays: HolidaySet,
+) => {
+  const start = effectiveStartDate(item.startDate, today);
+  switch (key) {
+    case "position":
+      return item.position;
+    case "section":
+      return item.section;
+    case "sheetNumber":
+      return item.sheetNumber;
+    case "title":
+      return item.title;
+    case "startMode":
+      return item.startMode;
+    case "startDate":
+      return start;
+    case "duration":
+      return item.durationDays ?? Number.POSITIVE_INFINITY;
+    case "endDate":
+      return addWorkingDays(start, item.durationDays, holidays) ?? "";
+    case "assignee":
+      return item.assignee ?? "";
+    case "status":
+      return STATUS_LABELS[item.status];
+    case "progress":
+      return calculateItemProgress(item, today, holidays) ?? -1;
+  }
+};
+
+const sortItems = (
+  items: ScheduleItem[],
+  sort: { key: SortKey; direction: SortDirection } | null,
+  today: string,
+  holidays: HolidaySet,
+) => {
+  if (!sort) return items;
+  const direction = sort.direction === "asc" ? 1 : -1;
+  return [...items].sort((left, right) => {
+    const leftValue = sortValue(left, sort.key, today, holidays);
+    const rightValue = sortValue(right, sort.key, today, holidays);
+    const result = typeof leftValue === "number" && typeof rightValue === "number"
+      ? leftValue - rightValue
+      : sortCollator.compare(String(leftValue), String(rightValue));
+    return result === 0
+      ? left.position - right.position
+      : result * direction;
+  });
+};
+
 function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, rowIndex, rowCount, timelineDays, today, holidays = new Set(), editing, assignees, allItems, dependencyError, selectedAnalysisId, predecessorIds, successorIds, pinnedColumns, onToggleAnalysis, onUpdate, onDelete, onMoveBy }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !editing });
   const style = { transform: CSS.Transform.toString(transform), transition } as CSSProperties;
-  const endDate = addWorkingDays(item.startDate, item.durationDays, holidays);
+  const startDate = effectiveStartDate(item.startDate, today);
+  const endDate = addWorkingDays(startDate, item.durationDays, holidays);
   const overdue = isOverdue(item, today, holidays);
   const progress = calculateItemProgress(item, today, holidays);
   const relationClass = item.id === selectedAnalysisId
@@ -189,7 +250,7 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
           </span>
         )}
       </td>
-      <td {...pinnableCellProps("startDate", "col-start-date", "startDate", formatDate(previousItem?.startDate ?? null))}>{editing ? <input className="cell-input date" type="date" readOnly={item.startMode === "dependencies"} value={item.startDate ?? ""} onChange={(e) => onUpdate(item.id, { startDate: e.target.value || null })} aria-label={`Дата початку рядка ${item.position}`} /> : formatDate(item.startDate)}</td>
+      <td {...pinnableCellProps("startDate", "col-start-date", "startDate", formatDate(previousItem?.startDate ?? null))}>{editing ? <input className="cell-input date" type="date" readOnly={item.startMode === "dependencies"} value={item.startDate ?? today} onChange={(e) => onUpdate(item.id, { startDate: e.target.value || null })} aria-label={`Дата початку рядка ${item.position}`} /> : formatDate(startDate)}</td>
       <td className={getPinnableColumnClassName("duration", "col-duration duration-cell", pinnedColumns, changedFields.has("durationDays") ? "changed-cell" : "")} style={getPinnedColumnStyle("duration", pinnedColumns)} title={changedFields.has("durationDays") ? `Було: ${previousItem?.durationDays ?? "—"}` : undefined}>{editing ? <input className="cell-input numeric" type="number" min="1" value={item.durationDays ?? ""} onChange={(e) => onUpdate(item.id, { durationDays: e.target.value ? Number(e.target.value) : null })} aria-label={`Робочі дні рядка ${item.position}`} /> : (item.durationDays ?? "—")}</td>
       <td className={getPinnableColumnClassName("endDate", "col-end-date", pinnedColumns, scheduleChanged ? "changed-cell" : "")} style={getPinnedColumnStyle("endDate", pinnedColumns)} title={scheduleChanged ? `Було: ${formatDate(addWorkingDays(previousItem?.startDate ?? null, previousItem?.durationDays ?? null, holidays))}` : undefined}>{formatDate(endDate)}</td>
       <td {...pinnableCellProps("assignee", "col-assignee", "assignee", previousItem?.assignee ?? "—")}>{editing ? <input className="cell-input compact" list="assignee-options" value={item.assignee ?? ""} onChange={(e) => onUpdate(item.id, { assignee: e.target.value || null })} aria-label={`Виконавець рядка ${item.position}`} /> : <span className="assignee-code">{item.assignee ?? "—"}</span>}</td>
@@ -273,8 +334,13 @@ export function ScheduleGrid(props: ScheduleGridProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const centeredToday = useRef(false);
   const [pinnedColumns, setPinnedColumns] = useState<Set<PinnableColumnKey>>(() => new Set());
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const displayItems = useMemo(
+    () => sortItems(props.items, sort, props.today, props.holidays ?? new Set()),
+    [props.holidays, props.items, props.today, sort],
+  );
   const timelineKey = props.timelineDays.join("|");
-  const visibleItemsKey = props.items.map((item) => item.id).sort().join("|");
+  const visibleItemsKey = displayItems.map((item) => item.id).join("|");
   const previousById = new Map(
     (props.previousItems ?? []).map((item) => [item.id, item]),
   );
@@ -289,6 +355,32 @@ export function ScheduleGrid(props: ScheduleGridProps) {
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (over && active.id !== over.id) props.onReorder(String(active.id), String(over.id));
   };
+  const nextSortDirection = (key: SortKey): SortDirection =>
+    sort?.key === key && sort.direction === "asc" ? "desc" : "asc";
+  const toggleSort = (key: SortKey) => {
+    setSort({ key, direction: nextSortDirection(key) });
+  };
+  const renderSortButton = (key: SortKey, label: string) => {
+    const direction = sort?.key === key ? sort.direction : null;
+    const nextDirection = nextSortDirection(key);
+    return (
+      <button
+        className={`sort-button ${direction ? "active" : ""}`}
+        type="button"
+        onClick={() => toggleSort(key)}
+        aria-label={`Сортувати ${label} за ${nextDirection === "asc" ? "зростанням" : "спаданням"}`}
+        title={`Сортувати за ${nextDirection === "asc" ? "зростанням" : "спаданням"}`}
+      >
+        {direction === "desc" ? <ChevronDownIcon /> : <ChevronUpIcon />}
+      </button>
+    );
+  };
+  const renderHeaderContent = (key: SortKey, label: string) => (
+    <div className="sortable-header">
+      <span>{label}</span>
+      {renderSortButton(key, label)}
+    </div>
+  );
   const togglePinnedColumn = (key: PinnableColumnKey) => {
     setPinnedColumns((current) => {
       const next = new Set(current);
@@ -312,7 +404,7 @@ export function ScheduleGrid(props: ScheduleGridProps) {
         aria-label={label}
       >
         <div className="pinnable-header">
-          <span>{label}</span>
+          {renderHeaderContent(key, label)}
           <input
             type="checkbox"
             checked={checked}
@@ -354,19 +446,19 @@ export function ScheduleGrid(props: ScheduleGridProps) {
           ) : null}
           <thead>
             <tr>
-              <th rowSpan={2} className="sticky-col col-number">№</th>
-              <th rowSpan={2} className="sticky-col col-section">Розділ</th>
-              <th rowSpan={2} className="sticky-col col-sheet">№ листа</th>
-              <th rowSpan={2} className="sticky-col col-title">Найменування креслення</th>
+              <th rowSpan={2} className="sticky-col col-number">{renderHeaderContent("position", "№")}</th>
+              <th rowSpan={2} className="sticky-col col-section">{renderHeaderContent("section", "Розділ")}</th>
+              <th rowSpan={2} className="sticky-col col-sheet">{renderHeaderContent("sheetNumber", "№ листа")}</th>
+              <th rowSpan={2} className="sticky-col col-title">{renderHeaderContent("title", "Найменування креслення")}</th>
               {pinnableColumns.map((column) => renderPinnableHeader(column.key, column.className, column.label))}
               {props.timelineDays.length > 0 ? <GanttMonthHeaders days={props.timelineDays} /> : <th rowSpan={2} className="empty-timeline-header">Календар робіт</th>}
             </tr>
             {props.timelineDays.length > 0 ? <tr><GanttDayHeaders days={props.timelineDays} today={props.today} holidays={props.holidays} /></tr> : null}
           </thead>
-          <SortableContext items={props.items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={displayItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
             <tbody>
-              {props.items.map((item, index) => (
-                <SortableScheduleRow key={item.id} {...props} allItems={props.allItems ?? props.items} item={item} previousItem={previousById.get(item.id)} comparisonEntry={comparisonById.get(item.id)} isAdded={addedIds.has(item.id)} rowIndex={index} rowCount={props.items.length} pinnedColumns={pinnedColumns} />
+              {displayItems.map((item, index) => (
+                <SortableScheduleRow key={item.id} {...props} allItems={props.allItems ?? props.items} item={item} previousItem={previousById.get(item.id)} comparisonEntry={comparisonById.get(item.id)} isAdded={addedIds.has(item.id)} rowIndex={index} rowCount={displayItems.length} pinnedColumns={pinnedColumns} />
               ))}
             </tbody>
           </SortableContext>
