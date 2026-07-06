@@ -62,19 +62,21 @@ export function DependencyEditor({
                 : "Обрати роботи"}
             </summary>
             <div className="dependency-options">
-              {candidates.map((candidate) => (
-                <label key={candidate.id}>
-                  <input
-                    type="checkbox"
-                    checked={item.predecessorIds.includes(candidate.id)}
-                    aria-label={`№${candidate.position} — ${candidate.title}`}
-                    onChange={(event) =>
-                      togglePredecessor(candidate.id, event.target.checked)}
-                  />
-                  <span>№{candidate.position} — {candidate.title}</span>
-                </label>
-              ))}
-              {candidates.length === 0 ? <span>Немає інших робіт</span> : null}
+              <div className="dependency-option-list">
+                {candidates.map((candidate) => (
+                  <label key={candidate.id}>
+                    <input
+                      type="checkbox"
+                      checked={item.predecessorIds.includes(candidate.id)}
+                      aria-label={`№${candidate.position} — ${candidate.title}`}
+                      onChange={(event) =>
+                        togglePredecessor(candidate.id, event.target.checked)}
+                    />
+                    <span>№{candidate.position} — {candidate.title}</span>
+                  </label>
+                ))}
+                {candidates.length === 0 ? <span>Немає інших робіт</span> : null}
+              </div>
               <button
                 className="button secondary dependency-done"
                 type="button"

@@ -165,7 +165,8 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .analysis-button:hover { color: var(--blue); border-color: #91add7; background: #edf4ff; }
 .dependency-editor { position: relative; display: grid; gap: 5px; text-align: left; }
 .dependency-picker summary { padding: 5px 7px; border: 1px solid #bdcbe0; border-radius: 5px; color: #45617f; background: #fff; cursor: pointer; list-style-position: inside; }
-.dependency-options { position: absolute; z-index: 20; top: 58px; left: 0; width: 300px; max-height: 230px; padding: 7px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; box-shadow: 0 12px 28px rgba(16,44,86,.18); }
+.dependency-options { position: absolute; z-index: 20; top: 58px; left: 0; width: 300px; padding: 7px; display: grid; gap: 6px; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; box-shadow: 0 12px 28px rgba(16,44,86,.18); }
+.dependency-option-list { max-height: 188px; overflow: auto; }
 .dependency-options label { display: flex; align-items: flex-start; gap: 7px; padding: 6px; border-radius: 4px; cursor: pointer; }
 .dependency-options label:hover { background: #eef4fb; }
 .dependency-options span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

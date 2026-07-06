@@ -105,6 +105,26 @@ describe("DependencyEditor", () => {
     expect(screen.getByRole("group", { name: "Список залежностей" })).not.toHaveAttribute("open");
   });
 
+  it("keeps the confirmation button outside the scrollable dependency list", async () => {
+    const user = userEvent.setup();
+    const item = row("d", 4, { startMode: "dependencies" });
+    const { container } = render(
+      <DependencyEditor
+        item={item}
+        items={[row("a", 1), row("b", 2), row("c", 3), item]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText("Обрати роботи"));
+
+    const scrollableList = container.querySelector(".dependency-option-list");
+    const doneButton = screen.getByRole("button", { name: "Готово" });
+    expect(scrollableList).toContainElement(screen.getByLabelText("№1 — Робота a"));
+    expect(scrollableList).not.toContainElement(doneButton);
+    expect(doneButton.closest(".dependency-options")).toBeInTheDocument();
+  });
+
   it("renders the current number for a stable selected id", () => {
     const selected = row("a", 1);
     const item = row("b", 2, {
