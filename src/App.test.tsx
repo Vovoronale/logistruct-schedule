@@ -8,7 +8,24 @@ vi.mock("./hooks/useToday", () => ({ useToday: () => "2026-07-07" }));
 const schedule = {
   revision: 1,
   updatedAt: "2026-07-03T00:00:00Z",
-  assignees: [],
+  assignees: [
+    {
+      id: "person-1",
+      name: "Іван",
+      color: "#00B050",
+      position: 1,
+      createdAt: "2026-07-03T00:00:00Z",
+      updatedAt: "2026-07-03T00:00:00Z",
+    },
+    {
+      id: "person-2",
+      name: "Олена",
+      color: "#FFC000",
+      position: 2,
+      createdAt: "2026-07-03T00:00:00Z",
+      updatedAt: "2026-07-03T00:00:00Z",
+    },
+  ],
   items: [
     {
       id: "drawing-001",
@@ -20,7 +37,7 @@ const schedule = {
       startDate: "2026-07-03",
       durationDays: 5,
       predecessorIds: [],
-      assignee: null,
+      assignee: "Іван",
       status: "planned",
       createdAt: "2026-07-03T00:00:00Z",
       updatedAt: "2026-07-03T00:00:00Z",
@@ -35,7 +52,7 @@ const schedule = {
       startDate: "2026-07-03",
       durationDays: 10,
       predecessorIds: [],
-      assignee: null,
+      assignee: "Олена",
       status: "completed",
       createdAt: "2026-07-03T00:00:00Z",
       updatedAt: "2026-07-03T00:00:00Z",
@@ -151,6 +168,36 @@ describe("schedule application", () => {
     render(<App />);
     expect(await screen.findByRole("button", { name: "Редагувати" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Додати рядок" })).not.toBeInTheDocument();
+  });
+
+  it("shows every row again after the last assignee filter is unchecked", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(schedule.items[0].title);
+
+    await user.click(screen.getByText("Усі виконавці"));
+    await user.click(screen.getByRole("checkbox", { name: "Іван" }));
+    expect(screen.getByText(schedule.items[0].title)).toBeVisible();
+    expect(screen.queryByText(schedule.items[1].title)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: "Іван" }));
+
+    expect(screen.getByText(schedule.items[0].title)).toBeVisible();
+    expect(screen.getByText(schedule.items[1].title)).toBeVisible();
+    expect(screen.getAllByLabelText("Виконавець")[0]).toHaveTextContent("Усі виконавці");
+  });
+
+  it("opens the employee workload page from the workspace toolbar", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(schedule.items[0].title);
+
+    await user.click(screen.getByRole("button", { name: "Завантаженість" }));
+
+    expect(screen.getByRole("region", { name: "Завантаженість працівників" })).toBeVisible();
+    expect(screen.getByText("Зараз: №1")).toBeVisible();
+    expect(screen.getByText("Звільняється: 10.07.2026")).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Графік креслень" })).not.toBeInTheDocument();
   });
 
   it("shows the blocking row when dependency errors prevent saving", async () => {

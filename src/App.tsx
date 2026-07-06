@@ -3,12 +3,13 @@ import { AppHeader } from "./components/AppHeader";
 import { AssigneeDialog } from "./components/AssigneeDialog";
 import { AssigneeLegend } from "./components/AssigneeLegend";
 import { EditActions } from "./components/EditActions";
+import { EmployeeWorkloadPage } from "./components/EmployeeWorkloadPage";
 import { LoginDialog } from "./components/LoginDialog";
 import { ProgressOverview } from "./components/ProgressOverview";
 import { ScheduleGrid } from "./components/ScheduleGrid";
 import { ScheduleModes } from "./components/ScheduleModes";
 import { Toast } from "./components/Toast";
-import { WorkspaceToolbar, type WorkspacePanel } from "./components/WorkspaceToolbar";
+import { WorkspaceToolbar, type WorkspacePanel, type WorkspaceView } from "./components/WorkspaceToolbar";
 import { useSchedule } from "./hooks/useSchedule";
 import { useToday } from "./hooks/useToday";
 import { useHolidays } from "./hooks/useHolidays";
@@ -30,6 +31,7 @@ export default function App() {
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [openPanel, setOpenPanel] = useState<WorkspacePanel | null>(null);
+  const [activeView, setActiveView] = useState<WorkspaceView>("schedule");
   const [comparisonRequested, setComparisonRequested] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const deferredQuery = useDeferredValue(filters.query);
@@ -101,6 +103,15 @@ export default function App() {
   const togglePanel = (panel: WorkspacePanel) => {
     setOpenPanel((current) => current === panel ? null : panel);
   };
+  const changeView = (view: WorkspaceView) => {
+    setActiveView(view);
+    setOpenPanel(null);
+    if (view === "workload") {
+      setAnalysisId(null);
+      setComparisonRequested(false);
+      schedule.clearComparison();
+    }
+  };
 
   useEffect(() => {
     if (openPanel === null) return;
@@ -130,10 +141,13 @@ export default function App() {
             visibleCount={filteredItems.length}
             totalCount={schedule.items.length}
             progressPercentage={progress.overall?.percentage ?? null}
+            activeView={activeView}
             openPanel={openPanel}
             onChange={setFilters}
+            onViewChange={changeView}
             onTogglePanel={togglePanel}
             onCompare={() => {
+              setActiveView("schedule");
               setOpenPanel(null);
               setAnalysisId(null);
               setComparisonRequested(true);
@@ -158,7 +172,7 @@ export default function App() {
           ) : null}
         </div>
         <div className="workspace-content">
-        {schedule.isEditing ? (
+        {schedule.isEditing && activeView === "schedule" ? (
           <EditActions
             dirty={schedule.isDirty}
             canSave={schedule.canSave}
@@ -174,7 +188,7 @@ export default function App() {
             onCancel={cancel}
           />
         ) : null}
-        {(selectedAnalysisId !== null || comparisonRequested || comparison !== null) ? <ScheduleModes
+        {activeView === "schedule" && (selectedAnalysisId !== null || comparisonRequested || comparison !== null) ? <ScheduleModes
           analysisActive={selectedAnalysisId !== null}
           onClearAnalysis={() => setAnalysisId(null)}
           editing={schedule.isEditing}
@@ -208,7 +222,15 @@ export default function App() {
             <button className="button secondary" type="button" onClick={() => void schedule.load()}>Спробувати ще раз</button>
           </div>
         ) : null}
-        {!schedule.loading && schedule.saved ? (
+        {!schedule.loading && schedule.saved && activeView === "workload" ? (
+          <EmployeeWorkloadPage
+            items={schedule.items}
+            assignees={schedule.assignees}
+            today={today}
+            holidays={holidays}
+          />
+        ) : null}
+        {!schedule.loading && schedule.saved && activeView === "schedule" ? (
           <section className="schedule-frame" aria-label="Графік креслень">
             <ScheduleGrid
               items={filteredItems}

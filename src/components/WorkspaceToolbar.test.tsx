@@ -4,25 +4,36 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
 
 const filters = { query: "", section: [], assignee: [], status: [] };
+const renderToolbar = (props: Partial<Parameters<typeof WorkspaceToolbar>[0]> = {}) =>
+  render(
+    <WorkspaceToolbar
+      filters={filters}
+      sections={[]}
+      assignees={[]}
+      visibleCount={0}
+      totalCount={0}
+      activeView="schedule"
+      openPanel={null}
+      onChange={vi.fn()}
+      onViewChange={vi.fn()}
+      onTogglePanel={vi.fn()}
+      onCompare={vi.fn()}
+      {...props}
+    />,
+  );
 
 describe("WorkspaceToolbar", () => {
   it("renders compact schedule controls and reports filter changes", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
 
-    render(
-      <WorkspaceToolbar
-        filters={filters}
-        sections={["КЗ-0"]}
-        assignees={["Іван"]}
-        visibleCount={12}
-        totalCount={68}
-        openPanel={null}
-        onChange={onChange}
-        onTogglePanel={vi.fn()}
-        onCompare={vi.fn()}
-      />,
-    );
+    renderToolbar({
+      sections: ["КЗ-0"],
+      assignees: ["Іван"],
+      visibleCount: 12,
+      totalCount: 68,
+      onChange,
+    });
 
     expect(screen.getByText("12 із 68 креслень")).toBeVisible();
     expect(screen.getByRole("button", { name: "Прогрес" })).toHaveAttribute("aria-expanded", "false");
@@ -36,19 +47,13 @@ describe("WorkspaceToolbar", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
 
-    const { rerender } = render(
-      <WorkspaceToolbar
-        filters={filters}
-        sections={["КЗ-0", "КМ2"]}
-        assignees={["Іван", "Олена"]}
-        visibleCount={12}
-        totalCount={68}
-        openPanel={null}
-        onChange={onChange}
-        onTogglePanel={vi.fn()}
-        onCompare={vi.fn()}
-      />,
-    );
+    const { rerender } = renderToolbar({
+      sections: ["КЗ-0", "КМ2"],
+      assignees: ["Іван", "Олена"],
+      visibleCount: 12,
+      totalCount: 68,
+      onChange,
+    });
 
     await user.click(screen.getByText("Усі розділи"));
     await user.click(screen.getByRole("checkbox", { name: "КЗ-0" }));
@@ -61,8 +66,10 @@ describe("WorkspaceToolbar", () => {
         assignees={["Іван", "Олена"]}
         visibleCount={12}
         totalCount={68}
+        activeView="schedule"
         openPanel={null}
         onChange={onChange}
+        onViewChange={vi.fn()}
         onTogglePanel={vi.fn()}
         onCompare={vi.fn()}
       />,
@@ -85,24 +92,44 @@ describe("WorkspaceToolbar", () => {
     const onTogglePanel = vi.fn();
     const onCompare = vi.fn();
 
-    render(
-      <WorkspaceToolbar
-        filters={filters}
-        sections={[]}
-        assignees={[]}
-        visibleCount={0}
-        totalCount={0}
-        openPanel="progress"
-        onChange={vi.fn()}
-        onTogglePanel={onTogglePanel}
-        onCompare={onCompare}
-      />,
-    );
+    renderToolbar({
+      openPanel: "progress",
+      onTogglePanel,
+      onCompare,
+    });
 
     expect(screen.getByRole("button", { name: "Прогрес" })).toHaveAttribute("aria-expanded", "true");
     await user.click(screen.getByRole("button", { name: "Виконавці" }));
     expect(onTogglePanel).toHaveBeenCalledWith("assignees");
     await user.click(screen.getByRole("button", { name: "Порівняти" }));
     expect(onCompare).toHaveBeenCalledOnce();
+  });
+
+  it("switches between the schedule and workload pages", async () => {
+    const user = userEvent.setup();
+    const onViewChange = vi.fn();
+
+    renderToolbar({ onViewChange });
+
+    await user.click(screen.getByRole("button", { name: "Завантаженість" }));
+
+    expect(onViewChange).toHaveBeenCalledWith("workload");
+  });
+
+  it("closes open filter menus before switching pages", async () => {
+    const user = userEvent.setup();
+    const onViewChange = vi.fn();
+    const { container } = renderToolbar({
+      assignees: ["Іван"],
+      onViewChange,
+    });
+
+    await user.click(screen.getByText("Усі виконавці"));
+    expect(container.querySelector('details[open]')).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Завантаженість" }));
+
+    expect(container.querySelector('details[open]')).not.toBeInTheDocument();
+    expect(onViewChange).toHaveBeenCalledWith("workload");
   });
 });

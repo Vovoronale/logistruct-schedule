@@ -41,7 +41,15 @@ describe("schedule row styles", () => {
   it("mutes incomplete rows with a stronger treatment for empty rows", () => {
     const css = readFileSync("src/styles.css", "utf8");
 
-    expect(css).toMatch(/\.schedule-table tbody tr\.row-partial \{ opacity: \.68; \}/);
-    expect(css).toMatch(/\.schedule-table tbody tr\.row-empty \{ opacity: \.42; \}/);
+    expect(css).not.toMatch(/\.schedule-table tbody tr\.row-(partial|empty) \{ opacity:/);
+    expect(css).toMatch(/\.schedule-table tbody tr\.row-partial td \{[^}]*color: #52627a;/s);
+    expect(css).toMatch(/\.schedule-table tbody tr\.row-empty td \{[^}]*color: #7f8da0;/s);
+  });
+
+  it("keeps the dependency picker opaque above edited rows", () => {
+    const css = readFileSync("src/styles.css", "utf8");
+
+    expect(css).toMatch(/\.dependency-options \{[^}]*z-index: 60;[^}]*background: #fff;/s);
+    expect(css).toMatch(/\.schedule-table tbody td\.dependency-cell \{[^}]*overflow: visible;/s);
   });
 });
