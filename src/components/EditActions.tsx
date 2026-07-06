@@ -1,17 +1,19 @@
-import { PlusIcon, SaveIcon, XIcon } from "./Icons";
+import { PlusIcon, SaveIcon, UndoIcon, XIcon } from "./Icons";
 
 interface EditActionsProps {
   dirty: boolean;
   canSave: boolean;
+  canUndo: boolean;
   saving: boolean;
   error?: string;
   onAdd: () => void;
   onManageAssignees: () => void;
+  onUndo: () => void;
   onSave: () => void;
   onCancel: () => void;
 }
 
-export function EditActions({ dirty, canSave, saving, error, onAdd, onManageAssignees, onSave, onCancel }: EditActionsProps) {
+export function EditActions({ dirty, canSave, canUndo, saving, error, onAdd, onManageAssignees, onUndo, onSave, onCancel }: EditActionsProps) {
   return (
     <div className="edit-actions">
       <div>
@@ -23,6 +25,9 @@ export function EditActions({ dirty, canSave, saving, error, onAdd, onManageAssi
       </button>
       <button className="button secondary" type="button" onClick={onManageAssignees}>
         Виконавці
+      </button>
+      <button className="button secondary" type="button" onClick={onUndo} disabled={!canUndo}>
+        <UndoIcon /> Відмінити операцію
       </button>
       <button className="button ghost" type="button" onClick={onCancel}>
         <XIcon /> Скасувати

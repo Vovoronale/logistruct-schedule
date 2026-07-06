@@ -25,6 +25,9 @@ export const EditIcon = (props: IconProps) => (
 export const RefreshIcon = (props: IconProps) => (
   <IconBase {...props}><path d="M20 6v5h-5"/><path d="M4 18v-5h5"/><path d="M18.2 9A7 7 0 0 0 6.5 6.5L4 11"/><path d="M5.8 15A7 7 0 0 0 17.5 17.5L20 13"/></IconBase>
 );
+export const UndoIcon = (props: IconProps) => (
+  <IconBase {...props}><path d="M9 7H4v5"/><path d="M4 12a8 8 0 1 0 2.35-5.65L4 8.7"/></IconBase>
+);
 export const SearchIcon = (props: IconProps) => (
   <IconBase {...props}><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></IconBase>
 );

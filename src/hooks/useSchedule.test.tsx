@@ -116,6 +116,38 @@ describe("useSchedule assignee editing", () => {
 });
 
 describe("useSchedule dependency editing", () => {
+  it("undoes draft operations one step at a time", async () => {
+    const { result } = await editingHook(client());
+
+    expect(result.current.canUndo).toBe(false);
+
+    act(() => { result.current.updateItem("drawing-001", { durationDays: 3 }); });
+    expect(result.current.items[0].durationDays).toBe(3);
+    expect(result.current.canUndo).toBe(true);
+
+    act(() => { result.current.undoLast(); });
+
+    expect(result.current.items[0].durationDays).toBe(2);
+    expect(result.current.isDirty).toBe(false);
+    expect(result.current.canUndo).toBe(false);
+  });
+
+  it("undoes assignee edits together with assigned rows", async () => {
+    const { result } = await editingHook(client());
+
+    act(() => {
+      result.current.replaceAssignees([{ ...assignee, name: "Ірина" }]);
+    });
+
+    expect(result.current.assignees[0].name).toBe("Ірина");
+    expect(result.current.items[0].assignee).toBe("Ірина");
+
+    act(() => { result.current.undoLast(); });
+
+    expect(result.current.assignees[0].name).toBe("ІВ");
+    expect(result.current.items[0].assignee).toBe("ІВ");
+  });
+
   it("preserves rapid sequential patches to the same draft", async () => {
     const { result } = await editingHook(client());
 

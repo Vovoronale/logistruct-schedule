@@ -27,6 +27,16 @@ function cloneItems(items: ScheduleItem[]): ScheduleItem[] {
   }));
 }
 
+function cloneAssignees(assignees: Assignee[]): Assignee[] {
+  return assignees.map((person) => ({ ...person }));
+}
+
+interface DraftSnapshot {
+  items: ScheduleItem[];
+  assignees: Assignee[];
+  isDirty: boolean;
+}
+
 export function useSchedule(
   client: ScheduleClient = scheduleClient,
   holidays: HolidaySet = new Set(),
@@ -35,6 +45,10 @@ export function useSchedule(
   const [draftItems, setDraftItems] = useState<ScheduleItem[]>([]);
   const draftItemsRef = useRef<ScheduleItem[]>([]);
   const [draftAssignees, setDraftAssignees] = useState<Assignee[]>([]);
+  const draftAssigneesRef = useRef<Assignee[]>([]);
+  const undoStackRef = useRef<DraftSnapshot[]>([]);
+  const isDirtyRef = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -56,6 +70,33 @@ export function useSchedule(
     setDraftItems(next);
   }, []);
 
+  const replaceDraftAssignees = useCallback((next: Assignee[]) => {
+    draftAssigneesRef.current = next;
+    setDraftAssignees(next);
+  }, []);
+
+  const setDirty = useCallback((next: boolean) => {
+    isDirtyRef.current = next;
+    setIsDirty(next);
+  }, []);
+
+  const clearUndo = useCallback(() => {
+    undoStackRef.current = [];
+    setCanUndo(false);
+  }, []);
+
+  const pushUndoSnapshot = useCallback(() => {
+    undoStackRef.current = [
+      ...undoStackRef.current,
+      {
+        items: cloneItems(draftItemsRef.current),
+        assignees: cloneAssignees(draftAssigneesRef.current),
+        isDirty: isDirtyRef.current,
+      },
+    ];
+    setCanUndo(true);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -66,19 +107,20 @@ export function useSchedule(
       ]);
       setSaved(schedule);
       replaceDraftItems(cloneItems(schedule.items));
-      setDraftAssignees(schedule.assignees);
+      replaceDraftAssignees(cloneAssignees(schedule.assignees));
       setAuthenticated(session);
-      setIsDirty(false);
+      setDirty(false);
       setDependencyError(null);
       setComparisonSnapshot(null);
       setHistory([]);
       setHistoryError(null);
+      clearUndo();
     } catch (loadError) {
       setError(messageFrom(loadError));
     } finally {
       setLoading(false);
     }
-  }, [client, replaceDraftItems]);
+  }, [clearUndo, client, replaceDraftAssignees, replaceDraftItems, setDirty]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void load(), 0);
@@ -104,13 +146,14 @@ export function useSchedule(
   const beginEditing = useCallback(() => {
     if (!authenticated || !saved) return false;
     replaceDraftItems(cloneItems(saved.items));
-    setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
+    replaceDraftAssignees(cloneAssignees(saved.assignees));
     setIsEditing(true);
-    setIsDirty(false);
+    setDirty(false);
     setDependencyError(null);
     setComparisonSnapshot(null);
+    clearUndo();
     return true;
-  }, [authenticated, replaceDraftItems, saved]);
+  }, [authenticated, clearUndo, replaceDraftAssignees, replaceDraftItems, saved, setDirty]);
 
   const login = useCallback(
     async (password: string) => {
@@ -118,23 +161,25 @@ export function useSchedule(
       setAuthenticated(true);
       if (saved) {
         replaceDraftItems(cloneItems(saved.items));
-        setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
+        replaceDraftAssignees(cloneAssignees(saved.assignees));
         setIsEditing(true);
         setDependencyError(null);
         setComparisonSnapshot(null);
+        clearUndo();
       }
     },
-    [client, replaceDraftItems, saved],
+    [clearUndo, client, replaceDraftAssignees, replaceDraftItems, saved],
   );
 
   const logout = useCallback(async () => {
     await client.logout();
     setAuthenticated(false);
     setIsEditing(false);
-    setIsDirty(false);
+    setDirty(false);
     setDependencyError(null);
     setComparisonSnapshot(null);
-  }, [client]);
+    clearUndo();
+  }, [clearUndo, client, setDirty]);
 
   const applyDraft = useCallback((
     update: ScheduleItem[] | ((current: ScheduleItem[]) => ScheduleItem[]),
@@ -142,6 +187,7 @@ export function useSchedule(
     const next = typeof update === "function"
       ? update(draftItemsRef.current)
       : update;
+    pushUndoSnapshot();
     try {
       replaceDraftItems(recalculateSchedule(next, holidays));
       setDependencyError(null);
@@ -154,8 +200,8 @@ export function useSchedule(
       setDependencyError(nextError);
       setError(nextError.message);
     }
-    setIsDirty(true);
-  }, [holidays, replaceDraftItems]);
+    setDirty(true);
+  }, [holidays, pushUndoSnapshot, replaceDraftItems, setDirty]);
 
   const updateItem = useCallback(
     (id: string, patch: Partial<ScheduleItem>) => {
@@ -221,20 +267,33 @@ export function useSchedule(
   }, [applyDraft]);
 
   const replaceAssignees = useCallback((next: Assignee[]) => {
-    const result = applyAssigneeChanges(draftItemsRef.current, draftAssignees, next);
+    const result = applyAssigneeChanges(draftItemsRef.current, draftAssigneesRef.current, next);
     applyDraft(result.items);
-    setDraftAssignees(result.assignees);
-  }, [applyDraft, draftAssignees]);
+    replaceDraftAssignees(result.assignees);
+  }, [applyDraft, replaceDraftAssignees]);
+
+  const undoLast = useCallback(() => {
+    const snapshot = undoStackRef.current.at(-1);
+    if (!snapshot) return;
+    undoStackRef.current = undoStackRef.current.slice(0, -1);
+    replaceDraftItems(cloneItems(snapshot.items));
+    replaceDraftAssignees(cloneAssignees(snapshot.assignees));
+    setDirty(snapshot.isDirty);
+    setDependencyError(null);
+    setError(null);
+    setCanUndo(undoStackRef.current.length > 0);
+  }, [replaceDraftAssignees, replaceDraftItems, setDirty]);
 
   const cancel = useCallback(() => {
     if (!saved) return;
     replaceDraftItems(cloneItems(saved.items));
-    setDraftAssignees(saved.assignees.map((person) => ({ ...person })));
+    replaceDraftAssignees(cloneAssignees(saved.assignees));
     setIsEditing(false);
-    setIsDirty(false);
+    setDirty(false);
     setDependencyError(null);
     setError(null);
-  }, [replaceDraftItems, saved]);
+    clearUndo();
+  }, [clearUndo, replaceDraftAssignees, replaceDraftItems, saved, setDirty]);
 
   const save = useCallback(async () => {
     if (!saved) return;
@@ -253,19 +312,20 @@ export function useSchedule(
       });
       setSaved(next);
       replaceDraftItems(cloneItems(next.items));
-      setDraftAssignees(next.assignees);
-      setIsDirty(false);
+      replaceDraftAssignees(cloneAssignees(next.assignees));
+      setDirty(false);
       setIsEditing(false);
       setDependencyError(null);
       setComparisonSnapshot(null);
       setHistory([]);
+      clearUndo();
     } catch (saveError) {
       setError(messageFrom(saveError));
       throw saveError;
     } finally {
       setSaving(false);
     }
-  }, [client, dependencyError, draftAssignees, holidays, replaceDraftItems, saved]);
+  }, [clearUndo, client, dependencyError, draftAssignees, holidays, replaceDraftAssignees, replaceDraftItems, saved, setDirty]);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -312,6 +372,7 @@ export function useSchedule(
       error,
       dependencyError,
       canSave,
+      canUndo,
       history,
       historyLoading,
       historyError,
@@ -326,6 +387,7 @@ export function useSchedule(
       reorderItem,
       moveBy,
       replaceAssignees,
+      undoLast,
       cancel,
       save,
       loadHistory,
@@ -345,6 +407,7 @@ export function useSchedule(
       error,
       dependencyError,
       canSave,
+      canUndo,
       history,
       historyLoading,
       historyError,
@@ -359,6 +422,7 @@ export function useSchedule(
       reorderItem,
       moveBy,
       replaceAssignees,
+      undoLast,
       cancel,
       save,
       loadHistory,

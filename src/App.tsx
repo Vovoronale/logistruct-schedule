@@ -162,12 +162,14 @@ export default function App() {
           <EditActions
             dirty={schedule.isDirty}
             canSave={schedule.canSave}
+            canUndo={schedule.canUndo}
             saving={schedule.saving}
             error={schedule.dependencyError
               ? `Рядок №${schedule.items.find((item) => item.id === schedule.dependencyError?.itemId)?.position ?? "?"}: ${schedule.dependencyError.message}`
               : undefined}
             onAdd={schedule.addItem}
             onManageAssignees={() => setAssigneeDialogOpen(true)}
+            onUndo={schedule.undoLast}
             onSave={() => void save()}
             onCancel={cancel}
           />
