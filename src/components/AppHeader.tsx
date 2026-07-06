@@ -33,7 +33,7 @@ export function AppHeader({
         <div className="brand-mark" aria-hidden="true">L</div>
         <div className="brand-copy">
           <span className="company-name">LogiStruct</span>
-          <h1>Графік випуску креслень</h1>
+          <h1>Графік виконання креслень</h1>
           <p className="object-name">Об’єкт: Аквапарк «Став»</p>
         </div>
       </div>

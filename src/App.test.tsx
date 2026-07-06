@@ -68,6 +68,7 @@ describe("schedule application", () => {
     render(<App />);
 
     expect(screen.getByText("LogiStruct")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Графік виконання креслень" })).toBeVisible();
     expect(screen.getByText("Об’єкт: Аквапарк «Став»")).toBeVisible();
   });
 

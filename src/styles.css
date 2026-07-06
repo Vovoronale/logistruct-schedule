@@ -19,6 +19,13 @@
   --c2: 82px;
   --c3: 82px;
   --c4: 330px;
+  --c5: 96px;
+  --c6: 92px;
+  --c7: 76px;
+  --c8: 96px;
+  --c9: 88px;
+  --c10: 104px;
+  --c11: 92px;
 }
 
 * { box-sizing: border-box; }
@@ -100,13 +107,15 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .schedule-table thead tr:first-child > th:nth-child(2), .schedule-table tbody td:nth-child(2) { width: var(--c2); min-width: var(--c2); max-width: var(--c2); text-align: center; }
 .schedule-table thead tr:first-child > th:nth-child(3), .schedule-table tbody td:nth-child(3) { width: var(--c3); min-width: var(--c3); max-width: var(--c3); text-align: center; }
 .schedule-table thead tr:first-child > th:nth-child(4), .schedule-table tbody td:nth-child(4) { width: var(--c4); min-width: var(--c4); max-width: var(--c4); }
-.schedule-table thead tr:first-child > th:nth-child(5), .schedule-table tbody td:nth-child(5) { width: 180px; min-width: 180px; text-align: center; }
-.schedule-table thead tr:first-child > th:nth-child(6), .schedule-table tbody td:nth-child(6) { width: 112px; min-width: 112px; text-align: center; }
-.schedule-table thead tr:first-child > th:nth-child(7), .schedule-table tbody td:nth-child(7) { width: 80px; min-width: 80px; text-align: center; }
-.schedule-table thead tr:first-child > th:nth-child(8), .schedule-table tbody td:nth-child(8) { width: 112px; min-width: 112px; text-align: center; }
-.schedule-table thead tr:first-child > th:nth-child(9), .schedule-table tbody td:nth-child(9) { width: 92px; min-width: 92px; text-align: center; }
-.schedule-table thead tr:first-child > th:nth-child(10), .schedule-table tbody td:nth-child(10) { width: 120px; min-width: 120px; text-align: center; }
-.schedule-table thead tr:first-child > th:nth-child(11), .schedule-table tbody td:nth-child(11) { width: 104px; min-width: 104px; text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(5), .schedule-table tbody td:nth-child(5) { width: var(--c5); min-width: var(--c5); max-width: var(--c5); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(6), .schedule-table tbody td:nth-child(6) { width: var(--c6); min-width: var(--c6); max-width: var(--c6); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(7), .schedule-table tbody td:nth-child(7) { width: var(--c7); min-width: var(--c7); max-width: var(--c7); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(8), .schedule-table tbody td:nth-child(8) { width: var(--c8); min-width: var(--c8); max-width: var(--c8); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(9), .schedule-table tbody td:nth-child(9) { width: var(--c9); min-width: var(--c9); max-width: var(--c9); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(10), .schedule-table tbody td:nth-child(10) { width: var(--c10); min-width: var(--c10); max-width: var(--c10); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(11), .schedule-table tbody td:nth-child(11) { width: var(--c11); min-width: var(--c11); max-width: var(--c11); text-align: center; }
+.schedule-table thead tr:first-child > th:nth-child(n+5):nth-child(-n+11),
+.schedule-table tbody td:nth-child(n+5):nth-child(-n+11) { padding-inline: 6px; }
 .schedule-table .sticky-col { position: sticky; z-index: 4; }
 .schedule-table thead .sticky-col { z-index: 10; background: #f9fbfd; }
 .schedule-table .col-number { left: 0; }
@@ -197,7 +206,7 @@ button.dependency-chip { cursor: pointer; }
 .cell-input { width: 100%; min-width: 0; border: 1px solid #bdcbe0; border-radius: 5px; background: #fff; color: #17325c; padding: 6px 7px; outline: none; font-size: 11px; }
 .cell-input:focus { border-color: #5f8edc; box-shadow: 0 0 0 2px rgba(15,86,217,.1); }
 .cell-input.numeric { text-align: center; padding-inline: 3px; }
-.cell-input.date { min-width: 96px; padding-inline: 4px; }
+.cell-input.date { min-width: 0; padding-inline: 4px; }
 .title-input { min-height: 42px; max-height: 72px; resize: vertical; line-height: 1.3; }
 .delete-row, .drag-handle, .row-move-buttons button { border: 0; padding: 0; display: grid; place-items: center; cursor: pointer; background: transparent; border-radius: 4px; }
 .delete-row { flex: 0 0 28px; height: 28px; color: #bb3b3b; }
