@@ -34,7 +34,10 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const deferredQuery = useDeferredValue(filters.query);
   const effectiveFilters = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
-  const filteredItems = useMemo(() => filterItems(schedule.items, effectiveFilters), [schedule.items, effectiveFilters]);
+  const filteredItems = useMemo(
+    () => filterItems(schedule.items, effectiveFilters, { today, holidays }),
+    [effectiveFilters, holidays, schedule.items, today],
+  );
   const comparison = useMemo(
     () => schedule.comparisonSnapshot && schedule.saved
       ? compareSchedules(schedule.saved.items, schedule.comparisonSnapshot.items)

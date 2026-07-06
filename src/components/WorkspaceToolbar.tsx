@@ -51,11 +51,11 @@ export function WorkspaceToolbar({
     <div className="workspace-toolbar" aria-label="Керування графіком">
       <label className="search-control">
         <SearchIcon />
-        <span className="sr-only">Пошук креслення</span>
+        <span className="sr-only">Пошук по всіх колонках</span>
         <input
           value={filters.query}
           onChange={(event) => set("query", event.target.value)}
-          placeholder="Пошук креслення"
+          placeholder="Пошук по всіх колонках"
         />
       </label>
       <label className="select-control">

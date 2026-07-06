@@ -18,11 +18,11 @@ export function FilterBar({ filters, sections, assignees, onChange }: FilterBarP
     <div className="filter-bar" aria-label="Фільтри графіка">
       <label className="search-control">
         <SearchIcon />
-        <span className="sr-only">Пошук креслення</span>
+        <span className="sr-only">Пошук по всіх колонках</span>
         <input
           value={filters.query}
           onChange={(event) => set("query", event.target.value)}
-          placeholder="Пошук креслення"
+          placeholder="Пошук по всіх колонках"
         />
       </label>
       <label className="select-control">

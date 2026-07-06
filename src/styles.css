@@ -138,6 +138,9 @@ main { flex: 1; min-width: 0; min-height: 0; }
 .status-badge.completed { color: #27653b; background: #d5efd6; }
 .completed-row td { color: #748197; }
 .completed-row .col-title span { text-decoration: line-through; text-decoration-color: #b4bdca; }
+.schedule-table tbody tr.row-partial { opacity: .68; }
+.schedule-table tbody tr.row-empty { opacity: .42; }
+.row-partial .row-number, .row-empty .row-number { font-weight: 650; }
 .overdue-row .row-number { box-shadow: inset 3px 0 #d93636; color: #a21e1e; font-weight: 800; }
 .title-cell { min-width: 0; display: flex; align-items: center; gap: 8px; line-height: 1.35; }
 .title-cell > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }

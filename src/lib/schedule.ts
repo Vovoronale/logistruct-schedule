@@ -1,5 +1,6 @@
 import type { ScheduleItem, ScheduleStatus } from "../types";
 import { addWorkingDays, todayIso, type HolidaySet } from "./dates";
+import { calculateItemProgress } from "./progress";
 
 export interface ScheduleFilters {
   query: string;
@@ -8,19 +9,99 @@ export interface ScheduleFilters {
   status: ScheduleStatus | "";
 }
 
+interface ScheduleFilterContext {
+  today?: string;
+  holidays?: HolidaySet;
+}
+
 export const STATUS_LABELS: Readonly<Record<ScheduleStatus, string>> = {
   planned: "Заплановано",
   in_progress: "У роботі",
   completed: "Завершено",
 };
 
+const START_MODE_LABELS = {
+  manual: "Датою",
+  dependencies: "За залежностями",
+} as const;
+
+const progressFormatter = new Intl.NumberFormat("uk-UA", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+const normalizeSearchValue = (value: string) =>
+  value.toLocaleLowerCase("uk-UA");
+
+const formatProgress = (value: number) =>
+  `${progressFormatter.format(value)}%`;
+
+function filled(value: string | number | null | undefined): boolean {
+  if (typeof value === "number") return Number.isFinite(value) && value > 0;
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function getScheduleRowCompleteness(
+  item: ScheduleItem,
+): "complete" | "partial" | "empty" {
+  const startValue = item.startDate
+    ?? (item.startMode === "dependencies" && item.predecessorIds.length > 0
+      ? item.predecessorIds.join(",")
+      : null);
+  const filledValues = [
+    item.section,
+    item.sheetNumber,
+    item.title,
+    startValue,
+    item.durationDays,
+    item.assignee,
+  ].filter(filled).length;
+
+  if (filledValues === 0) return "empty";
+  return filledValues === 6 ? "complete" : "partial";
+}
+
+function searchableTextForItem(
+  item: ScheduleItem,
+  context: ScheduleFilterContext = {},
+): string {
+  const holidays = context.holidays ?? new Set();
+  const endDate = addWorkingDays(item.startDate, item.durationDays, holidays);
+  const progress = calculateItemProgress(item, context.today ?? todayIso(), holidays);
+  const values = [
+    `№${item.position}`,
+    String(item.position),
+    item.section,
+    String(item.sheetNumber),
+    item.title,
+    START_MODE_LABELS[item.startMode],
+    item.startDate ?? "",
+    formatDateForSearch(item.startDate),
+    item.durationDays === null ? "" : String(item.durationDays),
+    endDate ?? "",
+    formatDateForSearch(endDate),
+    item.assignee ?? "",
+    item.status,
+    STATUS_LABELS[item.status],
+    progress === null ? "" : formatProgress(progress),
+  ];
+  return normalizeSearchValue(values.join(" "));
+}
+
+function formatDateForSearch(value: string | null): string {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${day}.${month}.${year}` : value;
+}
+
 export function filterItems(
   items: ScheduleItem[],
   filters: ScheduleFilters,
+  context: ScheduleFilterContext = {},
 ): ScheduleItem[] {
-  const query = filters.query.trim().toLocaleLowerCase("uk-UA");
+  const query = normalizeSearchValue(filters.query.trim());
   return items.filter((item) => {
-    if (query && !item.title.toLocaleLowerCase("uk-UA").includes(query)) return false;
+    if (query && !searchableTextForItem(item, context).includes(query)) return false;
     if (filters.section && item.section !== filters.section) return false;
     if (filters.assignee && item.assignee !== filters.assignee) return false;
     if (filters.status && item.status !== filters.status) return false;

@@ -28,7 +28,7 @@ describe("WorkspaceToolbar", () => {
     expect(screen.getByRole("button", { name: "Прогрес" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Виконавці" })).toHaveAttribute("aria-controls", "assignees-panel");
 
-    await user.type(screen.getByRole("textbox", { name: "Пошук креслення" }), "п");
+    await user.type(screen.getByRole("textbox", { name: "Пошук по всіх колонках" }), "п");
     expect(onChange).toHaveBeenLastCalledWith({ ...filters, query: "п" });
   });
 

@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { loadHolidays, normalizeHolidays } from "./holidays";
 
 describe("normalizeHolidays", () => {
@@ -24,5 +26,15 @@ describe("loadHolidays", () => {
   it("falls back to an empty set when loading fails", async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error("offline"));
     await expect(loadHolidays(fetcher)).resolves.toEqual(new Set());
+  });
+});
+
+describe("public holiday configuration", () => {
+  it("includes the manually configured July 2026 holidays", async () => {
+    const holidays = normalizeHolidays(JSON.parse(
+      await readFile(resolve("public", "holidays.json"), "utf8"),
+    ));
+
+    expect(holidays).toEqual(new Set(["2026-07-09", "2026-07-10"]));
   });
 });

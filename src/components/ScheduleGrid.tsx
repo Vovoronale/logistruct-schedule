@@ -12,7 +12,7 @@ import type {
 } from "../types";
 import { addWorkingDays, formatDate, type HolidaySet } from "../lib/dates";
 import { calculateItemProgress } from "../lib/progress";
-import { isOverdue, STATUS_LABELS } from "../lib/schedule";
+import { getScheduleRowCompleteness, isOverdue, STATUS_LABELS } from "../lib/schedule";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, TrashIcon } from "./Icons";
 import { DependencyEditor } from "./DependencyEditor";
 import { DependencyArrows } from "./DependencyArrows";
@@ -142,9 +142,11 @@ function SortableScheduleRow({ item, previousItem, comparisonEntry, isAdded, row
     .join(", ") || "—";
   const scheduleChanged = changedFields.has("startDate")
     || changedFields.has("durationDays");
+  const completeness = getScheduleRowCompleteness(item);
+  const completenessClass = completeness === "complete" ? "" : `row-${completeness}`;
 
   return (
-    <tr ref={setNodeRef} style={style} data-testid={`schedule-row-${item.id}`} className={`${item.status === "completed" ? "completed-row" : ""} ${overdue ? "overdue-row" : ""} ${isDragging ? "dragging" : ""} ${relationClass} ${isAdded ? "comparison-added" : ""}`}>
+    <tr ref={setNodeRef} style={style} data-testid={`schedule-row-${item.id}`} className={`${item.status === "completed" ? "completed-row" : ""} ${overdue ? "overdue-row" : ""} ${isDragging ? "dragging" : ""} ${relationClass} ${isAdded ? "comparison-added" : ""} ${completenessClass}`}>
       <td className={`sticky-col col-number row-number ${changedFields.has("position") ? "changed-cell" : ""}`} title={changedFields.has("position") ? `Було: ${previousItem?.position ?? "—"}` : undefined}>
         {editing ? (
           <button className="drag-handle" type="button" aria-label={`Перемістити рядок ${item.position}`} {...attributes} {...listeners}><GripIcon /></button>

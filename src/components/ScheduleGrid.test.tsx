@@ -190,6 +190,50 @@ describe("ScheduleGrid calendar columns", () => {
     expect(onToggleAnalysis).toHaveBeenCalledWith("b");
   });
 
+  it("marks partially filled and empty sheet rows for muted styling", () => {
+    const fullItem = { ...item, id: "full", position: 1, assignee: "Олена" };
+    const partialItem = {
+      ...item,
+      id: "partial",
+      position: 2,
+      startDate: null,
+      durationDays: null,
+      assignee: null,
+    };
+    const emptyItem = {
+      ...item,
+      id: "empty",
+      position: 3,
+      section: "",
+      sheetNumber: 0,
+      title: "",
+      startDate: null,
+      durationDays: null,
+      assignee: null,
+      predecessorIds: [],
+    };
+
+    render(
+      <ScheduleGrid
+        items={[fullItem, partialItem, emptyItem]}
+        timelineDays={[]}
+        today="2026-07-04"
+        editing={false}
+        assignees={[]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onReorder={vi.fn()}
+        onMoveBy={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("schedule-row-full")).not.toHaveClass("row-partial");
+    expect(screen.getByTestId("schedule-row-full")).not.toHaveClass("row-empty");
+    expect(screen.getByTestId("schedule-row-partial")).toHaveClass("row-partial");
+    expect(screen.getByTestId("schedule-row-partial")).not.toHaveClass("row-empty");
+    expect(screen.getByTestId("schedule-row-empty")).toHaveClass("row-empty");
+  });
+
   it("renders dependency routes over the gantt and keeps hidden links unfinished", async () => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
       callback(0);

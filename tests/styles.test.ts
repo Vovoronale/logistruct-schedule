@@ -37,4 +37,11 @@ describe("schedule row styles", () => {
     expect(css).not.toMatch(/\.schedule-table \.col-start-date \{ left:/);
     expect(css).not.toMatch(/\.schedule-table \.col-progress \{ left:/);
   });
+
+  it("mutes incomplete rows with a stronger treatment for empty rows", () => {
+    const css = readFileSync("src/styles.css", "utf8");
+
+    expect(css).toMatch(/\.schedule-table tbody tr\.row-partial \{ opacity: \.68; \}/);
+    expect(css).toMatch(/\.schedule-table tbody tr\.row-empty \{ opacity: \.42; \}/);
+  });
 });
