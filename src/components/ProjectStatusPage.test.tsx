@@ -55,8 +55,10 @@ describe("ProjectStatusPage", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Стан виконання проєкту" })).toBeVisible();
+    expect(screen.getByText("Станом на 07 липня 2026 року")).toBeVisible();
     expect(screen.getByTestId("overall-status")).toHaveTextContent("Загальний стан");
-    expect(screen.getByTestId("overall-status")).toHaveTextContent("Виконано 1 із 2");
+    expect(screen.queryByText(/Виконано \d+ із \d+/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/у роботі \d+/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "КБ" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "КМ" })).toBeVisible();
   });

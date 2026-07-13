@@ -13,7 +13,18 @@ function percentageText(percentage: number | null): string {
 
 function statusText(label: string, summary: StatusSummary): string {
   if (summary.total === 0) return `${label}: даних для розрахунку поки немає.`;
-  return `${label} — ${percentageText(summary.percentage)}. Виконано ${summary.completed} із ${summary.total}; у роботі ${summary.inProgress}, заплановано ${summary.planned}.`;
+  return `${label} — ${percentageText(summary.percentage)}.`;
+}
+
+function statusDateText(value: string): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  const formatted = new Intl.DateTimeFormat("uk-UA", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date).replace(/\s*р\.$/u, "");
+  return `Станом на ${formatted} року`;
 }
 
 function updatedText(value?: string): string {
@@ -50,6 +61,7 @@ export function ProjectStatusPage({
           <div>
             <span className="status-company">LogiStruct · Аквапарк «Став»</span>
             <h1>Стан виконання проєкту</h1>
+            <p className="status-date">{statusDateText(today)}</p>
           </div>
         </header>
 

@@ -456,6 +456,7 @@ button.dependency-chip { cursor: pointer; }
 }
 .status-company { color: #637895; font-size: 12px; font-weight: 750; letter-spacing: .04em; }
 .status-header h1 { margin: 5px 0 0; color: #102c56; font-size: clamp(27px, 4vw, 46px); line-height: 1.05; letter-spacing: -.045em; }
+.status-date { margin: 9px 0 0; color: #526985; font-size: 13px; font-weight: 650; }
 .overall-status-block {
   margin: clamp(48px, 8vw, 92px) 0 clamp(42px, 7vw, 76px);
   padding-left: clamp(18px, 3vw, 32px);
