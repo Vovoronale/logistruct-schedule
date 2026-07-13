@@ -418,3 +418,74 @@ button.dependency-chip { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+.project-status-page {
+  width: 100%;
+  min-height: 100dvh;
+  overflow: auto;
+  padding: clamp(24px, 5vw, 72px);
+  color: #172b4d;
+  background:
+    linear-gradient(135deg, rgba(15,86,217,.055), transparent 42%),
+    #f4f7fb;
+}
+.status-sheet {
+  width: min(980px, 100%);
+  min-height: min(690px, calc(100dvh - clamp(48px, 10vw, 144px)));
+  margin: 0 auto;
+  padding: clamp(26px, 5vw, 64px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #d7e0ed;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(16,44,86,.1);
+}
+.status-header { display: flex; align-items: center; gap: 18px; }
+.status-brand {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: #0f56d9;
+  font-size: 24px;
+  font-weight: 850;
+}
+.status-company { color: #637895; font-size: 12px; font-weight: 750; letter-spacing: .04em; }
+.status-header h1 { margin: 5px 0 0; color: #102c56; font-size: clamp(27px, 4vw, 46px); line-height: 1.05; letter-spacing: -.045em; }
+.overall-status-block {
+  margin: clamp(48px, 8vw, 92px) 0 clamp(42px, 7vw, 76px);
+  padding-left: clamp(18px, 3vw, 32px);
+  border-left: 5px solid #0f56d9;
+}
+.overall-status-block span { color: #637895; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overall-status-block p { max-width: 820px; margin: 12px 0 0; color: #102c56; font-size: clamp(23px, 3.4vw, 40px); font-weight: 720; line-height: 1.25; letter-spacing: -.035em; }
+.discipline-statuses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid #d7e0ed; border-bottom: 1px solid #d7e0ed; }
+.discipline-status { position: relative; padding: 28px 28px 30px 0; }
+.discipline-status + .discipline-status { padding-left: 28px; border-left: 1px solid #d7e0ed; }
+.discipline-status::before { content: ""; position: absolute; top: -3px; left: 0; width: 76px; height: 5px; }
+.kb-status::before { background: #8064a2; }
+.km-status::before { left: 28px; background: #ed7d31; }
+.discipline-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.discipline-heading h2 { margin: 0; color: #102c56; font-size: 28px; letter-spacing: -.03em; }
+.discipline-heading strong { color: #315f9f; font-size: 18px; }
+.discipline-status p { margin: 18px 0 0; color: #526985; font-size: 15px; line-height: 1.65; }
+.status-footer { margin-top: auto; padding-top: 30px; display: flex; justify-content: space-between; gap: 18px; color: #7b8ba2; font-size: 11px; }
+.status-route-message { display: grid; place-items: center; color: #526985; font-size: 16px; font-weight: 650; }
+
+@media (max-width: 640px) {
+  .project-status-page { padding: 0; background: #fff; }
+  .status-sheet { min-height: 100dvh; padding: 24px 20px; border: 0; box-shadow: none; }
+  .status-header { align-items: flex-start; gap: 12px; }
+  .status-brand { width: 40px; height: 40px; font-size: 20px; }
+  .status-company { font-size: 10px; }
+  .overall-status-block { margin-block: 52px 46px; }
+  .discipline-statuses { grid-template-columns: 1fr; }
+  .discipline-status, .discipline-status + .discipline-status { padding: 24px 0; border-left: 0; }
+  .discipline-status + .discipline-status { border-top: 1px solid #d7e0ed; }
+  .km-status::before { left: 0; }
+  .status-footer { flex-direction: column; }
+}

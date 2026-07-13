@@ -44,7 +44,7 @@ describe("timeline helpers", () => {
   it("adds two calendar days of padding around scheduled work", () => {
     const days = buildTimelineDays([
       { startDate: "2026-07-03", durationDays: 2 },
-    ]);
+    ], "2026-07-03");
 
     expect(days[0]).toBe("2026-07-01");
     expect(days.at(-1)).toBe("2026-07-09");
